@@ -445,10 +445,16 @@ document.addEventListener('DOMContentLoaded', () => {
      CONFIGURAÇÕES
   ══════════════════════════════════════════ */
   q('btn-exportar')?.addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(getTransacoes(),null,2)],{type:'application/json'});
+    const payload = {
+      versao: '1.0',
+      exportadoEm: new Date().toISOString(),
+      transacoes: getTransacoes(),
+      assinaturas: getAssinaturas(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `carteira_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `money360_${new Date().toISOString().split('T')[0]}.json`;
     a.click(); URL.revokeObjectURL(a.href);
     mostrarToast('✅ Dados exportados!');
   });
@@ -459,10 +465,23 @@ document.addEventListener('DOMContentLoaded', () => {
     r.onload = ev => {
       try {
         const d = JSON.parse(ev.target.result);
-        if (!Array.isArray(d)) throw 0;
-        localStorage.setItem('carteira_transacoes', JSON.stringify(d));
-        mostrarToast(`✅ ${d.length} transações importadas! Recarregando…`);
-        setTimeout(()=>location.reload(), 1200);
+        // Novo formato: { transacoes: [], assinaturas: [], ... }
+        if (d && typeof d === 'object' && !Array.isArray(d) && Array.isArray(d.transacoes)) {
+          localStorage.setItem('carteira_transacoes', JSON.stringify(d.transacoes));
+          if (Array.isArray(d.assinaturas)) {
+            localStorage.setItem('carteira_assinaturas', JSON.stringify(d.assinaturas));
+          }
+          const nAss = (d.assinaturas||[]).length;
+          mostrarToast(`✅ ${d.transacoes.length} transações e ${nAss} assinatura(s) importadas! Recarregando…`);
+        }
+        // Formato antigo: array de transações
+        else if (Array.isArray(d)) {
+          localStorage.setItem('carteira_transacoes', JSON.stringify(d));
+          mostrarToast(`✅ ${d.length} transações importadas! Recarregando…`);
+        } else {
+          throw new Error('formato inválido');
+        }
+        setTimeout(() => location.reload(), 1200);
       } catch { mostrarToast('❌ Arquivo inválido.'); }
     };
     r.readAsText(f); e.target.value='';
