@@ -1,0 +1,490 @@
+/* ═══════════════════════════════════════════
+   MINHA CARTEIRA — ui.js v2.2
+   • Navegação entre views
+   • Tema mobile
+   • Hamburger / sidebar mobile
+   • View Transações (tabela espelho + filtros)
+   • View Assinaturas (CRUD completo)
+   • View Relatórios
+   • Configurações (exportar/importar/apagar)
+   • Toast de notificação
+═══════════════════════════════════════════ */
+'use strict';
+
+document.addEventListener('DOMContentLoaded', () => {
+
+  /* ── Helpers ── */
+  const q  = id => document.getElementById(id);
+  const abrirModal  = el => el && el.classList.add('modal--aberto');
+  const fecharModal = el => el && el.classList.remove('modal--aberto');
+
+  function moeda(v) { return Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+  function fmtData(s) { if(!s)return''; const[a,m,d]=s.split('-'); return `${d}/${m}/${a}`; }
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+  function getTransacoes() { try { return JSON.parse(localStorage.getItem('carteira_transacoes'))||[]; } catch{return[];} }
+
+  /* ══════════════════════════════════════════
+     TOAST
+  ══════════════════════════════════════════ */
+  const toastEl = q('toast');
+  function mostrarToast(msg, dur=3000) {
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.classList.add('toast--show');
+    clearTimeout(toastEl._t);
+    toastEl._t = setTimeout(() => toastEl.classList.remove('toast--show'), dur);
+  }
+  window._mostrarToast = mostrarToast;
+
+  /* ══════════════════════════════════════════
+     NAVEGAÇÃO DE VIEWS
+  ══════════════════════════════════════════ */
+  const navLinks = document.querySelectorAll('.nav-item[data-view]');
+  const views    = document.querySelectorAll('.view');
+
+  function mostrarView(nome) {
+    views.forEach(v => v.classList.remove('view--active'));
+    navLinks.forEach(l => l.classList.remove('nav-item--active'));
+    const ve = q('view-'+nome);
+    if (ve) ve.classList.add('view--active');
+    const le = document.querySelector(`.nav-item[data-view="${nome}"]`);
+    if (le) le.classList.add('nav-item--active');
+    toggleSidebar(false);
+    if (nome === 'relatorios')  renderRelatorios();
+    if (nome === 'transacoes')  renderTabelaTransacoes();
+    if (nome === 'assinaturas') renderAssinaturas();
+    if (nome === 'configuracoes') syncTemaConfig();
+  }
+
+  navLinks.forEach(l => l.addEventListener('click', e => { e.preventDefault(); mostrarView(l.dataset.view); }));
+
+  /* ══════════════════════════════════════════
+     SIDEBAR MOBILE
+  ══════════════════════════════════════════ */
+  const sidebar = q('sidebar');
+  const overlay = q('sidebar-overlay');
+
+  function toggleSidebar(force) {
+    const open = force !== undefined ? force : !sidebar.classList.contains('sidebar--open');
+    sidebar.classList.toggle('sidebar--open', open);
+    overlay.classList.toggle('active', open);
+    document.body.classList.toggle('no-scroll', open);
+  }
+
+  q('btn-hamburger')?.addEventListener('click', () => toggleSidebar());
+  overlay?.addEventListener('click', () => toggleSidebar(false));
+
+  /* ══════════════════════════════════════════
+     TEMA
+  ══════════════════════════════════════════ */
+  q('btn-tema-mobile')?.addEventListener('click', () => q('btn-tema')?.click());
+  q('btn-tema-config2')?.addEventListener('click', () => q('btn-tema')?.click());
+
+  function syncTemaConfig() {
+    const claro = document.documentElement.classList.contains('claro');
+    const lbl = q('config-tema-label');
+    if (lbl) lbl.textContent = claro ? 'Claro' : 'Escuro';
+  }
+
+  new MutationObserver(() => {
+    const claro = document.documentElement.classList.contains('claro');
+    const ic = q('btn-tema')?.querySelector('.tema-icon');
+    if (ic) ic.textContent = claro ? 'Tema Claro' : 'Tema Escuro';
+    const sol = q('btn-tema')?.querySelector('.icon-sol');
+    const lua = q('btn-tema')?.querySelector('.icon-lua');
+    if (sol) sol.style.display = claro ? 'none' : '';
+    if (lua) lua.style.display = claro ? '' : 'none';
+    syncTemaConfig();
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+  /* ══════════════════════════════════════════
+     DATA NO CABEÇALHO
+  ══════════════════════════════════════════ */
+  const anoEl = q('ano');
+  if (anoEl) anoEl.textContent = new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  /* ══════════════════════════════════════════
+     ATALHO NOVA TRANSAÇÃO
+  ══════════════════════════════════════════ */
+  q('btn-nova-transacao-atalho')?.addEventListener('click', () => {
+    mostrarView('dashboard');
+    setTimeout(() => q('input-descricao')?.focus(), 100);
+  });
+
+  /* ══════════════════════════════════════════
+     VIEW TRANSAÇÕES — tabela espelho
+  ══════════════════════════════════════════ */
+  const CAT_UI = {
+    salario:{e:'💰',n:'Salário'}, freelance:{e:'💻',n:'Freelance'}, investimento:{e:'📈',n:'Investimento'},
+    alimentacao:{e:'🍔',n:'Alimentação'}, transporte:{e:'🚗',n:'Transporte'}, moradia:{e:'🏠',n:'Moradia'},
+    saude:{e:'💊',n:'Saúde'}, lazer:{e:'🎮',n:'Lazer'}, educacao:{e:'📚',n:'Educação'}, outros:{e:'📦',n:'Outros'},
+  };
+
+  function renderTabelaTransacoes(lista) {
+    if (!lista) lista = getTransacoes();
+    const corpo  = q('tabela-body2');
+    const vazio  = q('lista-vazia2');
+    const tabela = q('tabela-transacoes2');
+    const badge  = q('contagem2');
+    if (!corpo) return;
+    corpo.innerHTML = '';
+    const sorted = [...lista].sort((a,b)=>b.data.localeCompare(a.data));
+    const empty = !sorted.length;
+    if (vazio)  vazio.style.display  = empty ? 'flex' : 'none';
+    if (tabela) tabela.style.display = empty ? 'none' : '';
+
+    sorted.forEach(t => {
+      const cat = CAT_UI[t.categoria]||CAT_UI.outros;
+      const tr  = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="td-data">${fmtData(t.data)}</td>
+        <td>${esc(t.descricao)}</td>
+        <td><span class="chip-categoria">${cat.e} ${cat.n}</span></td>
+        <td><span class="badge badge--${t.tipo}">${t.tipo==='receita'?'↑':'↓'} ${t.tipo}</span></td>
+        <td class="td-valor valor-${t.tipo}">${t.tipo==='receita'?'+':'−'} ${moeda(t.valor)}</td>
+        <td class="td-acoes">
+          <button class="btn-editar"  title="Editar"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg></button>
+          <button class="btn-excluir" title="Remover">×</button>
+        </td>`;
+      tr.querySelector('.btn-editar') .addEventListener('click', () => window._abrirEdicao?.(t.id));
+      tr.querySelector('.btn-excluir').addEventListener('click', () => window._solicitarExclusao?.(t.id));
+      corpo.appendChild(tr);
+    });
+    if (badge) badge.textContent = `${lista.length}`;
+  }
+
+  q('btn-filtrar2')?.addEventListener('click', () => {
+    const ini  = q('filtro2-inicio')?.value || '';
+    const fim  = q('filtro2-fim')?.value    || '';
+    const tipo = q('filtro2-tipo')?.value   || 'todos';
+    const cat  = q('filtro2-categoria')?.value || 'todas';
+    const res  = getTransacoes().filter(t => {
+      return (tipo==='todos'||t.tipo===tipo) && (cat==='todas'||t.categoria===cat)
+          && (!ini||t.data>=ini) && (!fim||t.data<=fim);
+    });
+    renderTabelaTransacoes(res);
+  });
+
+  q('btn-limpar-filtro2')?.addEventListener('click', () => {
+    ['filtro2-inicio','filtro2-fim'].forEach(id => { const e=q(id); if(e)e.value=''; });
+    ['filtro2-tipo','filtro2-categoria'].forEach(id => { const e=q(id); if(e)e.value=e.options[0].value; });
+    renderTabelaTransacoes();
+  });
+
+  /* ══════════════════════════════════════════
+     ASSINATURAS
+  ══════════════════════════════════════════ */
+  const STORAGE_ASS = 'carteira_assinaturas';
+  const CAT_ASS = {
+    streaming:       {e:'🎬', n:'Streaming'},
+    musica:          {e:'🎵', n:'Música'},
+    software:        {e:'💾', n:'Software / App'},
+    cloud:           {e:'☁️', n:'Nuvem'},
+    'servico-digital':{e:'🌐', n:'Serviço Digital'},
+    funcionario:     {e:'👤', n:'Funcionário'},
+    internet:        {e:'📡', n:'Internet / Tel.'},
+    seguro:          {e:'🛡️', n:'Seguro'},
+    academia:        {e:'🏋️', n:'Academia'},
+    educacao:        {e:'📚', n:'Educação'},
+    outros:          {e:'📦', n:'Outros'},
+  };
+  const COR_CAT_ASS = {
+    streaming:'#7C6FF7', musica:'#2EC4B6', software:'#5B9CF6',
+    cloud:'#30D988', 'servico-digital':'#FFC542', funcionario:'#FF5C7A',
+    internet:'#fb923c', seguro:'#f472b6', academia:'#34d399',
+    educacao:'#94a3b8', outros:'#6b7280',
+  };
+
+  function getAssinaturas() { try { return JSON.parse(localStorage.getItem(STORAGE_ASS))||[]; } catch{return[];} }
+  function saveAssinaturas(a) { try { localStorage.setItem(STORAGE_ASS,JSON.stringify(a)); } catch{} }
+
+  function renderAssinaturas() {
+    const lista  = getAssinaturas();
+    const grid   = q('ass-grid');
+    const vazio  = q('ass-vazio');
+    const badge  = q('nav-badge-assinaturas');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    /* Resumo */
+    const totalMensal = lista.reduce((a,s)=>a+s.valor,0);
+    const el1 = q('ass-total-mensal'); if (el1) el1.textContent = moeda(totalMensal);
+    const el2 = q('ass-total-anual');  if (el2) el2.textContent = moeda(totalMensal*12);
+    const el3 = q('ass-total-qtd');    if (el3) el3.textContent = lista.length;
+
+    /* Badge na nav */
+    if (badge) { badge.textContent = lista.length||''; badge.style.display = lista.length ? '' : 'none'; }
+
+    if (!lista.length) {
+      if (vazio) vazio.style.display = 'flex';
+      return;
+    }
+    if (vazio) vazio.style.display = 'none';
+
+    /* Ordena por categoria */
+    const sorted = [...lista].sort((a,b)=>a.categoria.localeCompare(b.categoria)||a.nome.localeCompare(b.nome));
+
+    sorted.forEach(s => {
+      const info = CAT_ASS[s.categoria]||CAT_ASS.outros;
+      const cor  = COR_CAT_ASS[s.categoria]||'#6b7280';
+      const card = document.createElement('div');
+      card.className = 'ass-card';
+      card.innerHTML = `
+        <div class="ass-card-accent" style="background:${cor}"></div>
+        <div class="ass-card-body">
+          <div class="ass-card-top">
+            <div class="ass-card-icon" style="background:${cor}22;color:${cor}">${info.e}</div>
+            <div class="ass-card-acoes">
+              <button class="btn-editar ass-btn-edit" title="Editar"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg></button>
+              <button class="btn-excluir ass-btn-del" title="Remover">×</button>
+            </div>
+          </div>
+          <h4 class="ass-card-nome">${esc(s.nome)}</h4>
+          <span class="ass-card-cat">${info.n}</span>
+          <div class="ass-card-valores">
+            <div><p class="ass-val-label">Por mês</p><p class="ass-val-num">${moeda(s.valor)}</p></div>
+            <div><p class="ass-val-label">Por ano</p><p class="ass-val-num">${moeda(s.valor*12)}</p></div>
+            ${s.vencimento ? `<div><p class="ass-val-label">Vence dia</p><p class="ass-val-num">${s.vencimento}</p></div>` : ''}
+          </div>
+          ${s.notas ? `<p class="ass-card-notas">${esc(s.notas)}</p>` : ''}
+        </div>`;
+      card.querySelector('.ass-btn-edit').addEventListener('click', () => abrirModalAssinatura(s.id));
+      card.querySelector('.ass-btn-del') .addEventListener('click', () => removerAssinatura(s.id));
+      grid.appendChild(card);
+    });
+  }
+
+  /* ── Modal assinatura ── */
+  const modalAss = q('modal-assinatura');
+
+  function abrirModalAssinatura(id) {
+    const titulo = q('ass-modal-titulo');
+    const errEl  = q('ass-msg-erro');
+    if (errEl) errEl.style.display = 'none';
+
+    if (id) {
+      const ass = getAssinaturas().find(a=>a.id===id);
+      if (!ass) return;
+      if (titulo)             titulo.textContent = 'Editar Assinatura';
+      if (q('ass-edit-id'))   q('ass-edit-id').value   = ass.id;
+      if (q('ass-nome'))      q('ass-nome').value       = ass.nome;
+      if (q('ass-valor'))     q('ass-valor').value      = ass.valor;
+      if (q('ass-vencimento'))q('ass-vencimento').value = ass.vencimento||'';
+      if (q('ass-categoria')) q('ass-categoria').value  = ass.categoria;
+      if (q('ass-notas'))     q('ass-notas').value      = ass.notas||'';
+    } else {
+      if (titulo) titulo.textContent = 'Nova Assinatura';
+      if (q('ass-edit-id'))   q('ass-edit-id').value   = '';
+      if (q('ass-nome'))      q('ass-nome').value       = '';
+      if (q('ass-valor'))     q('ass-valor').value      = '';
+      if (q('ass-vencimento'))q('ass-vencimento').value = '';
+      if (q('ass-categoria')) q('ass-categoria').value  = 'streaming';
+      if (q('ass-notas'))     q('ass-notas').value      = '';
+    }
+    abrirModal(modalAss);
+    q('ass-nome')?.focus();
+  }
+
+  function salvarAssinatura() {
+    const id   = q('ass-edit-id')?.value    || '';
+    const nome = q('ass-nome')?.value.trim()|| '';
+    const vStr = q('ass-valor')?.value      || '';
+    const venc = q('ass-vencimento')?.value || '';
+    const cat  = q('ass-categoria')?.value  || 'outros';
+    const nota = q('ass-notas')?.value.trim()|| '';
+    const errEl= q('ass-msg-erro');
+
+    function errAss(msg) { if(errEl){errEl.textContent=msg;errEl.style.display='flex';} }
+
+    if (!nome) return errAss('Informe o nome do serviço.');
+    const v = parseFloat(vStr);
+    if (!vStr||isNaN(v)||v<=0) return errAss('Informe um valor mensal válido.');
+
+    let lista = getAssinaturas();
+    if (id) {
+      const idx = lista.findIndex(a=>a.id===id);
+      if (idx !== -1) lista[idx] = {...lista[idx], nome, valor:v, vencimento:venc?+venc:'', categoria:cat, notas:nota};
+    } else {
+      lista.push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,5), nome, valor:v, vencimento:venc?+venc:'', categoria:cat, notas:nota });
+    }
+    saveAssinaturas(lista);
+    fecharModal(modalAss);
+    renderAssinaturas();
+    mostrarToast(id ? '✏️ Assinatura atualizada!' : '✅ Assinatura adicionada!');
+  }
+
+  function removerAssinatura(id) {
+    const lista = getAssinaturas().filter(a=>a.id!==id);
+    saveAssinaturas(lista);
+    renderAssinaturas();
+    mostrarToast('🗑️ Assinatura removida.');
+  }
+
+  q('btn-nova-assinatura')?.addEventListener('click', () => abrirModalAssinatura(null));
+  q('ass-modal-salvar')   ?.addEventListener('click', salvarAssinatura);
+  q('ass-modal-cancelar') ?.addEventListener('click', () => fecharModal(modalAss));
+  q('ass-modal-fechar')   ?.addEventListener('click', () => fecharModal(modalAss));
+  modalAss?.addEventListener('click', e => { if(e.target===modalAss) fecharModal(modalAss); });
+
+  /* ══════════════════════════════════════════
+     RELATÓRIOS
+  ══════════════════════════════════════════ */
+  const CORES_REL = ['#7C6FF7','#2EC4B6','#FF5C7A','#FFC542','#5B9CF6','#30D988','#fb923c','#f472b6','#34d399','#94a3b8'];
+
+  let periodoRel = 28; // dias; 0 = todo período
+
+  function filtrarTransacoesPorPeriodo(dias) {
+    const todas = getTransacoes();
+    if (dias === 0) return todas;
+    const limite = new Date();
+    limite.setDate(limite.getDate() - dias);
+    const limiteStr = limite.toISOString().split('T')[0];
+    return todas.filter(t => t.data >= limiteStr);
+  }
+
+  // Liga botões de período dos relatórios
+  document.querySelectorAll('.periodo-btn-rel').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.periodo-btn-rel').forEach(b => b.classList.remove('periodo-btn--ativo'));
+      btn.classList.add('periodo-btn--ativo');
+      periodoRel = +btn.dataset.dias;
+      renderRelatorios();
+    });
+  });
+
+  function renderRelatorios() {
+    const tx = filtrarTransacoesPorPeriodo(periodoRel);
+    /* Balanço por categoria */
+    const divCat = q('rel-categorias');
+    const relVaz = q('rel-vazio');
+    if (divCat) {
+      divCat.innerHTML = '';
+      const mapa = {};
+      tx.forEach(t => {
+        if (!mapa[t.categoria]) mapa[t.categoria]={rec:0,des:0};
+        mapa[t.categoria][t.tipo==='receita'?'rec':'des'] += t.valor;
+      });
+      const entradas = Object.entries(mapa).sort((a,b)=>(b[1].rec+b[1].des)-(a[1].rec+a[1].des));
+      if (!entradas.length) { if(relVaz) relVaz.style.display='block'; }
+      else {
+        if(relVaz) relVaz.style.display='none';
+        entradas.forEach(([cat,v])=>{
+          const info = CAT_UI[cat]||CAT_UI.outros;
+          const saldo = v.rec-v.des, max = Math.max(v.rec,v.des,1);
+          const row = document.createElement('div'); row.className='rel-cat-row';
+          row.innerHTML=`
+            <div class="rel-cat-nome"><span class="rel-cat-emoji">${info.e}</span><span>${info.n}</span></div>
+            <div class="rel-cat-barras">
+              <div class="rel-barra-wrap"><div class="rel-barra rel-barra--receita" style="width:${(v.rec/max*100).toFixed(1)}%"></div></div>
+              <div class="rel-barra-wrap"><div class="rel-barra rel-barra--despesa" style="width:${(v.des/max*100).toFixed(1)}%"></div></div>
+            </div>
+            <div class="rel-cat-valores">
+              <span class="valor-receita">+${moeda(v.rec)}</span>
+              <span class="valor-despesa">−${moeda(v.des)}</span>
+              <span class="rel-cat-saldo ${saldo>=0?'valor-receita':'valor-despesa'}">${saldo>=0?'+':'−'}${moeda(Math.abs(saldo))}</span>
+            </div>`;
+          divCat.appendChild(row);
+        });
+      }
+    }
+    /* Gráfico */
+    const cv2 = q('grafico-pizza2'), leg2 = q('grafico-legenda2'), vaz2 = q('grafico-vazio2');
+    if (cv2 && leg2) {
+      const ctx2 = cv2.getContext('2d');
+      ctx2.clearRect(0,0,cv2.width,cv2.height); leg2.innerHTML='';
+      const desp = tx.filter(t=>t.tipo==='despesa');
+      if (!desp.length) { if(vaz2) vaz2.style.display='block'; cv2.style.display='none'; }
+      else {
+        if(vaz2) vaz2.style.display='none'; cv2.style.display='block';
+        const map={};
+        desp.forEach(t=>{ map[t.categoria]=(map[t.categoria]||0)+t.valor; });
+        const total=Object.values(map).reduce((a,b)=>a+b,0);
+        const cx=cv2.width/2,cy=cv2.height/2,r=Math.min(cx,cy)-10,ri=r*.55;
+        let ang=-Math.PI/2;
+        Object.entries(map).sort((a,b)=>b[1]-a[1]).forEach(([cat,val],i)=>{
+          const fatia=(val/total)*2*Math.PI,cor=CORES_REL[i%CORES_REL.length];
+          ctx2.beginPath();ctx2.moveTo(cx,cy);ctx2.arc(cx,cy,r,ang,ang+fatia);ctx2.closePath();
+          ctx2.fillStyle=cor;ctx2.fill();
+          ctx2.beginPath();ctx2.arc(cx,cy,ri,0,2*Math.PI);
+          ctx2.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--surface-raised').trim()||'#131622';
+          ctx2.fill();
+          ang+=fatia;
+          const c=CAT_UI[cat]||CAT_UI.outros,pct=((val/total)*100).toFixed(1);
+          const li=document.createElement('div');li.className='legenda-item';
+          li.innerHTML=`<span class="legenda-cor" style="background:${cor}"></span><span>${c.e} ${c.n} (${pct}%)</span>`;
+          leg2.appendChild(li);
+        });
+        ctx2.font=`700 13px 'Plus Jakarta Sans',sans-serif`;
+        ctx2.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim()||'#f0f2ff';
+        ctx2.textAlign='center';ctx2.textBaseline='middle';
+        ctx2.fillText('Despesas',cx,cy-9);
+        ctx2.font=`600 13px 'Plus Jakarta Sans',sans-serif`;
+        ctx2.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--color-danger').trim()||'#FF5C7A';
+        ctx2.fillText(moeda(total),cx,cy+10);
+      }
+    }
+    /* Stats */
+    const sd = q('rel-stats');
+    if (sd) {
+      const rec = tx.filter(t=>t.tipo==='receita').reduce((a,t)=>a+t.valor,0);
+      const des = tx.filter(t=>t.tipo==='despesa').reduce((a,t)=>a+t.valor,0);
+      const sal = rec-des;
+      const mR  = tx.filter(t=>t.tipo==='receita').sort((a,b)=>b.valor-a.valor)[0];
+      const mD  = tx.filter(t=>t.tipo==='despesa').sort((a,b)=>b.valor-a.valor)[0];
+      const eco = rec>0?((sal/rec)*100).toFixed(1):'0';
+      sd.innerHTML=`
+        <div class="stat-item"><span class="stat-label">Total de registros</span><span class="stat-valor">${tx.length}</span></div>
+        <div class="stat-item"><span class="stat-label">Maior receita</span><span class="stat-valor valor-receita">${mR?moeda(mR.valor):'—'}</span>${mR?`<span class="stat-desc">${esc(mR.descricao)}</span>`:''}</div>
+        <div class="stat-item"><span class="stat-label">Maior despesa</span><span class="stat-valor valor-despesa">${mD?moeda(mD.valor):'—'}</span>${mD?`<span class="stat-desc">${esc(mD.descricao)}</span>`:''}</div>
+        <div class="stat-item"><span class="stat-label">Taxa de economia</span><span class="stat-valor ${sal>=0?'valor-receita':'valor-despesa'}">${eco}%</span></div>
+        <div class="stat-item"><span class="stat-label">Saldo total</span><span class="stat-valor ${sal>=0?'valor-receita':'valor-despesa'}">${moeda(sal)}</span></div>`;
+    }
+  }
+
+  /* ══════════════════════════════════════════
+     CONFIGURAÇÕES
+  ══════════════════════════════════════════ */
+  q('btn-exportar')?.addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(getTransacoes(),null,2)],{type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `carteira_${new Date().toISOString().split('T')[0]}.json`;
+    a.click(); URL.revokeObjectURL(a.href);
+    mostrarToast('✅ Dados exportados!');
+  });
+
+  q('btn-importar')?.addEventListener('change', e => {
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if (!Array.isArray(d)) throw 0;
+        localStorage.setItem('carteira_transacoes', JSON.stringify(d));
+        mostrarToast(`✅ ${d.length} transações importadas! Recarregando…`);
+        setTimeout(()=>location.reload(), 1200);
+      } catch { mostrarToast('❌ Arquivo inválido.'); }
+    };
+    r.readAsText(f); e.target.value='';
+  });
+
+  q('btn-limpar-tudo-config')?.addEventListener('click', () => q('btn-limpar-tudo')?.click());
+
+  /* ══════════════════════════════════════════
+     AUTO-SYNC: atualiza views abertas
+  ══════════════════════════════════════════ */
+  let _lastLen = -1;
+  setInterval(() => {
+    const d = getTransacoes();
+    if (d.length !== _lastLen) {
+      _lastLen = d.length;
+      if (q('view-transacoes')?.classList.contains('view--active'))  renderTabelaTransacoes();
+      if (q('view-relatorios')?.classList.contains('view--active'))  renderRelatorios();
+      if (q('view-assinaturas')?.classList.contains('view--active')) renderAssinaturas();
+    }
+  }, 600);
+
+  /* ── Renderiza badge de assinaturas ao carregar ── */
+  renderAssinaturas();
+
+});
