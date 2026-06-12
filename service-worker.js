@@ -4,7 +4,7 @@
 ═══════════════════════════════════════════ */
 'use strict';
 
-const CACHE_NAME = 'money360-v1';
+const CACHE_NAME = 'money360-v2';
 
 const ASSETS = [
   './',
@@ -21,7 +21,11 @@ const ASSETS = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(ASSETS))
+      .then(cache => Promise.all(
+        // cache:'reload' garante que peguemos a versão mais recente de cada
+        // arquivo (e não uma cópia antiga guardada no cache HTTP do navegador)
+        ASSETS.map(url => fetch(url, { cache: 'reload' }).then(resp => cache.put(url, resp)))
+      ))
       .then(() => self.skipWaiting())
   );
 });
