@@ -93,6 +93,10 @@ function init() {
   window._solicitarExclusao = solicitarExclusao;
   window._abrirEdicao       = abrirEdicao;
   window._getTransacoes     = () => transacoes;
+  window._recarregarTransacoes = () => {
+    transacoes = carregar(STORAGE_KEY) || [];
+    filtroAtivo ? aplicarFiltro() : renderTudo();
+  };
 }
 
 // ── EVENTOS ───────────────────────────────────────
@@ -124,7 +128,7 @@ function registrarEventos() {
 
   btnLimparTudo?.addEventListener('click', () => {
     if (!transacoes.length) return;
-    abrirModalEx('Deseja apagar TODAS as transações? Esta ação não pode ser desfeita.', null);
+    abrirModalEx('Deseja apagar TODAS as transações e assinaturas? Esta ação não pode ser desfeita.', null);
   });
 
   // Modal exclusão
@@ -141,7 +145,7 @@ function registrarEventos() {
   modalEdicao?.addEventListener('click', e => { if (e.target === modalEdicao) fecharM(modalEdicao); });
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { fecharModalEx(); fecharM(modalEdicao); }
+    if (e.key === 'Escape') { fecharModalEx(); fecharM(modalEdicao); window._fecharNovaTransacaoMobile?.(); }
   });
 
   btnTema?.addEventListener('click', alternarTema);
@@ -205,6 +209,7 @@ function adicionar() {
   if (msgErro) msgErro.style.display = 'none';
   toast(`✅ ${tipoSelecionado === 'receita' ? 'Receita' : 'Despesa'} adicionada!`);
   filtroAtivo ? aplicarFiltro() : renderTudo();
+  window._fecharNovaTransacaoMobile?.();
 }
 
 // ── REMOVER ───────────────────────────────────────
@@ -223,7 +228,11 @@ function removerTransacao(id) {
 
 function limparTudo() {
   transacoes = []; transacoesFiltradas = []; filtroAtivo = false;
-  salvar(STORAGE_KEY, transacoes); renderTudo(); toast('🗑️ Tudo removido.');
+  salvar(STORAGE_KEY, transacoes);
+  salvar('carteira_assinaturas', []);
+  renderTudo();
+  window._renderAssinaturas?.();
+  toast('🗑️ Tudo removido.');
 }
 
 // ── EDITAR ────────────────────────────────────────
@@ -419,7 +428,7 @@ function salvar(k,d)   { try{ localStorage.setItem(k,JSON.stringify(d)); }catch(
 function carregar(k)   { try{ const v=localStorage.getItem(k); return v?JSON.parse(v):null; }catch(e){return null;} }
 
 // ── UTILS ─────────────────────────────────────────
-function uid()    { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function uid()    { return (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2,6)); }
 function hoje()   { return new Date().toISOString().split('T')[0]; }
 function moeda(v) { return Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function fmtD(s)  { if(!s)return''; const [a,m,d]=s.split('-'); return `${d}/${m}/${a}`; }

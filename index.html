@@ -2,14 +2,133 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Minha Carteira — Controle Financeiro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Money360 — Controle Financeiro</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#7C6FF7" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Money360" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+
+  <!-- ===== TELA DE LOGIN / CADASTRO ===== -->
+  <div id="auth-screen" class="auth-screen">
+
+    <!-- PAINEL LOGIN -->
+    <div id="auth-login" class="auth-panel auth-panel--ativo">
+      <div class="auth-container">
+        <div class="auth-logo">
+          <svg class="brand-icon" viewBox="0 0 40 40" fill="none">
+            <rect width="40" height="40" rx="12" fill="url(#bgA1)"/>
+            <path d="M9 15C9 13.343 10.343 12 12 12H28C29.657 12 31 13.343 31 15V26C31 27.657 29.657 29 28 29H12C10.343 29 9 27.657 9 26V15Z" stroke="white" stroke-width="1.8" fill="none"/>
+            <path d="M9 17H31" stroke="white" stroke-width="1.8"/>
+            <circle cx="26" cy="23" r="1.8" fill="white"/>
+            <defs><linearGradient id="bgA1" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#7C6FF7"/><stop offset="1" stop-color="#2EC4B6"/></linearGradient></defs>
+          </svg>
+          <h1>Money360</h1>
+          <p>Seu dinheiro desescondido</p>
+        </div>
+        <div class="auth-card">
+          <h2 class="auth-title">Entrar</h2>
+
+          <div class="campo-grupo">
+            <label class="campo-label" for="login-email">E-mail</label>
+            <div class="input-wrap"><svg class="input-leading-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M2.94 6.94a2 2 0 0 1 2-2h10.12a2 2 0 0 1 2 2v6.12a2 2 0 0 1-2 2H4.94a2 2 0 0 1-2-2V6.94zm1.97-.06 5.09 3.6 5.09-3.6H4.91zm10.18 1.18-4.66 3.3a1 1 0 0 1-1.16 0l-4.66-3.3v4.94h10.48V8.06z"/></svg><input type="email" id="login-email" class="campo-input has-icon" placeholder="seu@email.com" autocomplete="email" /></div>
+          </div>
+          <div class="campo-grupo">
+            <label class="campo-label" for="login-password">Senha</label>
+            <div class="input-wrap auth-password-wrap"><svg class="input-leading-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4 4 0 00-4 4v2H5a2 2 0 00-2 2v7a2 2 0 002 2h10a2 2 0 002-2V9a2 2 0 00-2-2h-1V5a4 4 0 00-4-4zm2 6V5a2 2 0 10-4 0v2h4z" clip-rule="evenodd"/></svg><input type="password" id="login-password" class="campo-input has-icon" placeholder="Sua senha" autocomplete="current-password" /><button type="button" class="auth-eye" data-target="login-password" aria-label="Mostrar senha"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg></button></div>
+          </div>
+
+          <p id="login-error" class="msg-erro" style="display:none"></p>
+
+          <button id="login-btn" class="btn-primario"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 1.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L15.586 11H7a1 1 0 110-2h8.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg> Entrar</button>
+
+          <div class="auth-divider"><span>ou continue com</span></div>
+
+          <button id="google-btn" class="btn-google" type="button">
+            <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908C16.658 14.013 17.64 11.705 17.64 9.2z" fill="#4285F4"/>
+              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+              <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+            </svg>
+            Entrar com Google
+          </button>
+
+          <p class="auth-switch">Não tem conta? <button type="button" class="auth-link" id="go-register">Criar conta grátis</button></p>
+          <p class="auth-switch">Só quer testar? <button type="button" class="auth-link" id="btn-modo-local">Continuar sem login</button></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAINEL CADASTRO -->
+    <div id="auth-register" class="auth-panel">
+      <div class="auth-container">
+        <div class="auth-logo">
+          <svg class="brand-icon" viewBox="0 0 40 40" fill="none">
+            <rect width="40" height="40" rx="12" fill="url(#bgA2)"/>
+            <path d="M9 15C9 13.343 10.343 12 12 12H28C29.657 12 31 13.343 31 15V26C31 27.657 29.657 29 28 29H12C10.343 29 9 27.657 9 26V15Z" stroke="white" stroke-width="1.8" fill="none"/>
+            <path d="M9 17H31" stroke="white" stroke-width="1.8"/>
+            <circle cx="26" cy="23" r="1.8" fill="white"/>
+            <defs><linearGradient id="bgA2" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#7C6FF7"/><stop offset="1" stop-color="#2EC4B6"/></linearGradient></defs>
+          </svg>
+          <h1>Money360</h1>
+          <p>Crie sua conta e organize seu dinheiro</p>
+        </div>
+        <div class="auth-card">
+          <h2 class="auth-title">Criar Conta</h2>
+
+          <div class="campo-grupo">
+            <label class="campo-label" for="reg-email">E-mail</label>
+            <div class="input-wrap"><svg class="input-leading-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M2.94 6.94a2 2 0 0 1 2-2h10.12a2 2 0 0 1 2 2v6.12a2 2 0 0 1-2 2H4.94a2 2 0 0 1-2-2V6.94zm1.97-.06 5.09 3.6 5.09-3.6H4.91zm10.18 1.18-4.66 3.3a1 1 0 0 1-1.16 0l-4.66-3.3v4.94h10.48V8.06z"/></svg><input type="email" id="reg-email" class="campo-input has-icon" placeholder="seu@email.com" autocomplete="email" /></div>
+          </div>
+          <div class="campo-grupo">
+            <label class="campo-label" for="reg-password">Senha</label>
+            <div class="input-wrap auth-password-wrap"><svg class="input-leading-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4 4 0 00-4 4v2H5a2 2 0 00-2 2v7a2 2 0 002 2h10a2 2 0 002-2V9a2 2 0 00-2-2h-1V5a4 4 0 00-4-4zm2 6V5a2 2 0 10-4 0v2h4z" clip-rule="evenodd"/></svg><input type="password" id="reg-password" class="campo-input has-icon" placeholder="Crie uma senha (mín. 6 caracteres)" autocomplete="new-password" /><button type="button" class="auth-eye" data-target="reg-password" aria-label="Mostrar senha"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg></button></div>
+          </div>
+          <div class="campo-grupo">
+            <label class="campo-label" for="reg-confirm">Confirmar senha</label>
+            <div class="input-wrap auth-password-wrap"><svg class="input-leading-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 1a4 4 0 00-4 4v2H5a2 2 0 00-2 2v7a2 2 0 002 2h10a2 2 0 002-2V9a2 2 0 00-2-2h-1V5a4 4 0 00-4-4zm2 6V5a2 2 0 10-4 0v2h4z" clip-rule="evenodd"/></svg><input type="password" id="reg-confirm" class="campo-input has-icon" placeholder="Repita a senha" autocomplete="new-password" /><button type="button" class="auth-eye" data-target="reg-confirm" aria-label="Mostrar senha"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg></button></div>
+          </div>
+
+          <p id="reg-error" class="msg-erro" style="display:none"></p>
+
+          <button id="register-btn" class="btn-primario"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zM6 8a2 2 0 11-4 0 2 2 0 014 0zM1.49 15.326a.78.78 0 01-.358-.442 3 3 0 014.308-3.516 6.484 6.484 0 00-1.905 3.959c-.023.222-.014.442.025.654a8.07 8.07 0 01-2.07-.655zM16.44 15.98a4.97 4.97 0 002.07-.654.78.78 0 00.357-.442 3 3 0 00-4.308-3.517 6.484 6.484 0 011.907 3.96 2.32 2.32 0 01-.026.654zM18 8a2 2 0 11-4 0 2 2 0 014 0zM5.304 16.19a.844.844 0 01-.277-.71 5 5 0 019.947 0 .843.843 0 01-.277.71A6.975 6.975 0 0110 18a6.974 6.974 0 01-4.696-1.81z"/></svg> Criar Conta</button>
+
+          <div class="auth-divider"><span>ou continue com</span></div>
+
+          <button id="google-btn-register" class="btn-google" type="button">
+            <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908C16.658 14.013 17.64 11.705 17.64 9.2z" fill="#4285F4"/>
+              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+              <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+            </svg>
+            Criar conta com Google
+          </button>
+
+          <p class="auth-switch">Já tem conta? <button type="button" class="auth-link" id="go-login">Fazer login</button></p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== APP ===== -->
+  <div id="app-screen" class="app-screen" style="display:none">
 
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
@@ -105,8 +224,8 @@
         </section>
         <div class="layout-principal">
           <aside class="coluna-lateral">
-            <section class="painel">
-              <div class="painel-header"><h3 class="painel-titulo">Nova Transação</h3></div>
+            <section class="painel" id="painel-nova-transacao">
+              <div class="painel-header"><h3 class="painel-titulo">Nova Transação</h3><button id="btn-fechar-nova-transacao" class="btn-fechar-modal btn-fechar-mobile" aria-label="Fechar"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button></div>
               <div class="campo-grupo">
                 <label class="campo-label">Tipo</label>
                 <div class="tipo-toggle">
@@ -142,6 +261,7 @@
             </section>
           </aside>
           <section class="coluna-principal">
+            <button id="btn-abrir-nova-transacao" class="btn-fab-nova"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg> Nova Transação</button>
             <div class="filtros">
               <div class="periodo-rapido">
                 <button class="periodo-btn periodo-btn--ativo" data-dias="28">28 dias</button>
@@ -213,6 +333,7 @@
       <div id="view-configuracoes" class="view">
         <div class="page-header"><div><h1 class="page-title">Configurações</h1><p class="page-sub">Personalize seu aplicativo</p></div></div>
         <div class="config-grid">
+          <div class="painel"><div class="painel-header"><h3 class="painel-titulo">Conta</h3></div><div class="config-opcao"><div class="config-opcao-info"><span class="config-opcao-nome">Logado como</span><span class="config-opcao-desc" id="config-user-email">—</span></div><button class="btn-danger" id="btn-sair">⎋ Sair</button></div></div>
           <div class="painel"><div class="painel-header"><h3 class="painel-titulo">Aparência</h3></div><div class="config-opcao"><div class="config-opcao-info"><span class="config-opcao-nome">Tema atual</span><span class="config-opcao-desc" id="config-tema-label">Escuro</span></div><button class="btn-secundario" id="btn-tema-config2">Alternar</button></div></div>
           <div class="painel"><div class="painel-header"><h3 class="painel-titulo">Dados</h3></div><div class="config-opcao"><div class="config-opcao-info"><span class="config-opcao-nome">Exportar dados</span><span class="config-opcao-desc">Baixar todos os dados em JSON</span></div><button class="btn-secundario" id="btn-exportar">⬇ Exportar</button></div><div class="config-opcao"><div class="config-opcao-info"><span class="config-opcao-nome">Importar dados</span><span class="config-opcao-desc">Carregar JSON</span></div><label class="btn-secundario" style="cursor:pointer">⬆ Importar<input type="file" id="btn-importar" accept=".json" style="display:none" /></label></div><div class="config-opcao config-opcao--danger"><div class="config-opcao-info"><span class="config-opcao-nome">Apagar tudo</span><span class="config-opcao-desc">Remove todas as transações</span></div><button class="btn-danger" id="btn-limpar-tudo-config">🗑 Apagar</button></div></div>
           <div class="painel painel--sobre"><div class="painel-header"><h3 class="painel-titulo">Sobre</h3></div><div class="sobre-content"><svg class="sobre-logo" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="12" fill="url(#bg2)"/><path d="M9 15C9 13.343 10.343 12 12 12H28C29.657 12 31 13.343 31 15V26C31 27.657 29.657 29 28 29H12C10.343 29 9 27.657 9 26V15Z" stroke="white" stroke-width="1.8" fill="none"/><path d="M9 17H31" stroke="white" stroke-width="1.8"/><circle cx="26" cy="23" r="1.8" fill="white"/><defs><linearGradient id="bg2" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#7C6FF7"/><stop offset="1" stop-color="#2EC4B6"/></linearGradient></defs></svg><h4 class="sobre-nome">Money360</h4><p class="sobre-versao">Versão: Beta 1.0</p><p class="sobre-desc">Dados salvos localmente no navegador.</p></div></div>
@@ -221,6 +342,9 @@
 
     </main>
   </div>
+
+  </div>
+  <!-- /APP -->
 
   <!-- MODAL EXCLUSÃO — usa display:none ao invés de hidden -->
   <div id="modal" class="modal-overlay" role="dialog" aria-modal="true">
@@ -271,7 +395,20 @@
 
   <div id="toast" class="toast"></div>
 
+  <script src="auth.js"></script>
+  <script src="sync.js"></script>
   <script src="script.js"></script>
   <script src="ui.js"></script>
+
+  <!-- PWA: registra o service worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js').catch(err => {
+          console.warn('[PWA] Falha ao registrar service worker:', err);
+        });
+      });
+    }
+  </script>
 </body>
 </html>

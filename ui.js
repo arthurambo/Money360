@@ -104,10 +104,29 @@ document.addEventListener('DOMContentLoaded', () => {
   if (anoEl) anoEl.textContent = new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
   /* ══════════════════════════════════════════
+     NOVA TRANSAÇÃO — tela cheia no mobile
+  ══════════════════════════════════════════ */
+  const painelNovaTransacao = q('painel-nova-transacao');
+
+  function abrirNovaTransacaoMobile() {
+    painelNovaTransacao?.classList.add('painel--aberto');
+    document.body.classList.add('no-scroll');
+  }
+  function fecharNovaTransacaoMobile() {
+    painelNovaTransacao?.classList.remove('painel--aberto');
+    document.body.classList.remove('no-scroll');
+  }
+  window._fecharNovaTransacaoMobile = fecharNovaTransacaoMobile;
+
+  q('btn-abrir-nova-transacao')   ?.addEventListener('click', abrirNovaTransacaoMobile);
+  q('btn-fechar-nova-transacao')  ?.addEventListener('click', fecharNovaTransacaoMobile);
+
+  /* ══════════════════════════════════════════
      ATALHO NOVA TRANSAÇÃO
   ══════════════════════════════════════════ */
   q('btn-nova-transacao-atalho')?.addEventListener('click', () => {
     mostrarView('dashboard');
+    if (window.matchMedia('(max-width: 860px)').matches) abrirNovaTransacaoMobile();
     setTimeout(() => q('input-descricao')?.focus(), 100);
   });
 
@@ -305,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const idx = lista.findIndex(a=>a.id===id);
       if (idx !== -1) lista[idx] = {...lista[idx], nome, valor:v, vencimento:venc?+venc:'', categoria:cat, notas:nota};
     } else {
-      lista.push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,5), nome, valor:v, vencimento:venc?+venc:'', categoria:cat, notas:nota });
+      lista.push({ id: (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2,5)), nome, valor:v, vencimento:venc?+venc:'', categoria:cat, notas:nota });
     }
     saveAssinaturas(lista);
     fecharModal(modalAss);
@@ -319,6 +338,8 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAssinaturas();
     mostrarToast('🗑️ Assinatura removida.');
   }
+
+  window._renderAssinaturas = renderAssinaturas;
 
   q('btn-nova-assinatura')?.addEventListener('click', () => abrirModalAssinatura(null));
   q('ass-modal-salvar')   ?.addEventListener('click', salvarAssinatura);
