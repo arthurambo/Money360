@@ -295,7 +295,10 @@ $$;`;
     const { data, error } = await sb.rpc('admin_get_users');
 
     if (error) {
-      const needSetup = error.code === '42883' || (error.message || '').toLowerCase().includes('function');
+      const needSetup = error.code === 'PGRST202' || error.code === '42883'
+        || (error.message || '').toLowerCase().includes('function')
+        || (error.message || '').toLowerCase().includes('could not find')
+        || error.hint?.toLowerCase().includes('function');
       if (needSetup) {
         el.innerHTML = `
           <div class="setup-notice">
