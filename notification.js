@@ -225,7 +225,6 @@
     const btn   = document.getElementById('btn-toggle-notif');
     const chip  = document.getElementById('notif-status-chip');
     const tipos = document.getElementById('notif-tipos');
-    const teste = document.getElementById('notif-teste');
     if (!btn) return;
 
     const permBloq = 'Notification' in window && Notification.permission === 'denied';
@@ -242,9 +241,7 @@
       chip.className    = 'notif-chip' + (ativo ? ' notif-chip--on' : '');
     }
 
-    // Seções
     if (tipos) tipos.style.display = ativo ? '' : 'none';
-    if (teste) teste.style.display = ativo ? '' : 'none';
 
     if (ativo) sincronizarCheckboxes();
   }
@@ -265,35 +262,6 @@
     saveSettings(s);
   }
 
-  /* ── Teste ──────────────────────────────────── */
-
-  function testarCobranca() {
-    const assinaturas = JSON.parse(localStorage.getItem(ASS_KEY) || '[]');
-    if (assinaturas.length) {
-      const ass = assinaturas[0];
-      mostrarNotificacao(`💳 Cobrança hoje: ${ass.nome}`,
-        `R$ ${(ass.valor || 0).toFixed(2).replace('.', ',')} será cobrado hoje.`, 'teste-cob');
-    } else {
-      mostrarNotificacao('💳 Cobrança hoje: Netflix', 'R$ 55,90 será cobrado hoje.', 'teste-cob');
-    }
-  }
-
-  function testarVencimento() {
-    const assinaturas = JSON.parse(localStorage.getItem(ASS_KEY) || '[]');
-    if (assinaturas.length) {
-      const ass = assinaturas[0];
-      mostrarNotificacao(`📅 Vence em 7 dias: ${ass.nome}`,
-        `R$ ${(ass.valor || 0).toFixed(2).replace('.', ',')} será cobrado no dia ${ass.vencimento || '—'}.`, 'teste-prev');
-    } else {
-      mostrarNotificacao('📅 Vence em 7 dias: Spotify', 'R$ 21,90 será cobrado no dia 29.', 'teste-prev');
-    }
-  }
-
-  function testarMotivacional() {
-    const msg = gerarMotivacional() || 'Continue assim! Você está no caminho certo 💪';
-    mostrarNotificacao('💡 Money360', msg, 'teste-motiv');
-  }
-
   /* ── DOMContentLoaded ───────────────────────── */
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -308,11 +276,6 @@
         salvarTipo(tipo, e.target.checked);
       });
     });
-
-    // Botões de teste
-    document.getElementById('btn-teste-cobranca')?.addEventListener('click',    testarCobranca);
-    document.getElementById('btn-teste-vencimento')?.addEventListener('click',  testarVencimento);
-    document.getElementById('btn-teste-motivacional')?.addEventListener('click', testarMotivacional);
 
     atualizarUI();
     window._notif = { verificar: verificarNotificacoes, ativar, desativar, isAtivo, atualizarUI, syncParaIDB };

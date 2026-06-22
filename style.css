@@ -504,15 +504,6 @@ html.claro .auth-screen::before,html.claro .auth-screen::after{opacity:.18;}
 .toggle-switch input:checked + .toggle-slider{background:var(--brand-grad);}
 .toggle-switch input:checked + .toggle-slider::before{transform:translateX(20px);}
 
-/* Botões de teste */
-.notif-teste-btns{display:flex;flex-direction:column;gap:8px;}
-.notif-teste-btns button{
-  display:flex;align-items:center;gap:8px;
-  padding:10px 14px;border-radius:var(--r-sm);border:1px solid var(--border-subtle);
-  background:var(--surface-raised);color:var(--text-primary);
-  font-size:.82rem;font-weight:600;cursor:pointer;
-  transition:background .15s,border-color .15s;}
-.notif-teste-btns button:hover{background:var(--surface-sunken);border-color:var(--brand);}
 
 @media(max-width:640px){
   .notif-device{flex-direction:column;align-items:flex-start;}
