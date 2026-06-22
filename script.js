@@ -11,6 +11,7 @@ let transacoes          = carregar(STORAGE_KEY) || [];
 let tipoSelecionado     = 'receita';
 let tipoEditando        = 'receita';
 let idParaExcluir       = null;
+let modalCallback       = null;
 let filtroAtivo         = false;
 let transacoesFiltradas = [];
 
@@ -69,18 +70,9 @@ const editBtnDesp = $('edit-btn-despesa');
 const canvas = $('grafico-pizza');
 const ctx    = canvas ? canvas.getContext('2d') : null;
 
-const CATEGORIAS = {
-  salario:      { emoji: '💰', nome: 'Salário' },
-  freelance:    { emoji: '💻', nome: 'Freelance' },
-  investimento: { emoji: '📈', nome: 'Investimento' },
-  alimentacao:  { emoji: '🍔', nome: 'Alimentação' },
-  transporte:   { emoji: '🚗', nome: 'Transporte' },
-  moradia:      { emoji: '🏠', nome: 'Moradia' },
-  saude:        { emoji: '💊', nome: 'Saúde' },
-  lazer:        { emoji: '🎮', nome: 'Lazer' },
-  educacao:     { emoji: '📚', nome: 'Educação' },
-  outros:       { emoji: '📦', nome: 'Outros' },
-};
+function catMap() {
+  return window._catsMgr ? window._catsMgr.getCatMap() : { outros: { emoji: '📦', nome: 'Outros' } };
+}
 
 const CORES = ['#7C6FF7','#2EC4B6','#FF5C7A','#FFC542','#5B9CF6','#30D988','#fb923c','#f472b6','#34d399','#94a3b8'];
 
@@ -282,22 +274,26 @@ function selTipoEdit(tipo) {
 function abrirM(el)  { if (!el) return; el.classList.add('modal--aberto'); document.body.classList.add('no-scroll'); }
 function fecharM(el) { if (!el) return; el.classList.remove('modal--aberto'); document.body.classList.remove('no-scroll'); }
 
-function abrirModalEx(msg, id) {
+function abrirModalEx(msg, id, cb) {
   idParaExcluir = id;
+  modalCallback = cb || null;
   if (modalMsg) modalMsg.textContent = msg;
   abrirM(modal);
   modalConfirmar?.focus();
 }
-function fecharModalEx() { fecharM(modal); idParaExcluir = null; }
+function fecharModalEx() { fecharM(modal); idParaExcluir = null; modalCallback = null; }
 function confirmarEx() {
   const id = idParaExcluir;
+  const cb = modalCallback;
   fecharModalEx();
+  if (cb) { cb(); return; }
   if (id === null) limparTudo(); else removerTransacao(id);
 }
 
-// Expõe para ui.js
-window._abrirModal  = abrirM;
-window._fecharModal = fecharM;
+// Expõe para ui.js e categories.js
+window._abrirModal    = abrirM;
+window._fecharModal   = fecharM;
+window._abrirModalExCb = (msg, cb) => abrirModalEx(msg, null, cb);
 
 // ── RENDER ────────────────────────────────────────
 function renderTudo() { renderLista(transacoes); resumo(transacoes); grafico(transacoes); }
@@ -311,7 +307,7 @@ function renderLista(lista) {
   if (listaVazia) listaVazia.style.display = vaz ? 'flex' : 'none';
   if (tEl)        tEl.style.display        = vaz ? 'none' : '';
   ord.forEach(t => {
-    const cat = CATEGORIAS[t.categoria] || CATEGORIAS.outros;
+    const _cm = catMap(); const cat = _cm[t.categoria] || _cm.outros || { emoji: '📦', nome: t.categoria };
     const tr  = document.createElement('tr');
     tr.innerHTML = `
       <td class="td-data">${fmtD(t.data)}</td>
@@ -372,7 +368,7 @@ function grafico(lista) {
     ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--surface-raised').trim()||'#131622';
     ctx.fill(); ang+=f;
     if (leg) {
-      const c=CATEGORIAS[cat]||CATEGORIAS.outros, d=document.createElement('div');
+      const _cm2=catMap(); const c=_cm2[cat]||_cm2.outros||{emoji:'📦',nome:cat}, d=document.createElement('div');
       d.className='legenda-item';
       d.innerHTML=`<span class="legenda-cor" style="background:${cor}"></span><span>${c.emoji} ${c.nome} (${(val/total*100).toFixed(1)}%)</span>`;
       leg.appendChild(d);

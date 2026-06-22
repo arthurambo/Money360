@@ -133,11 +133,9 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ══════════════════════════════════════════
      VIEW TRANSAÇÕES — tabela espelho
   ══════════════════════════════════════════ */
-  const CAT_UI = {
-    salario:{e:'💰',n:'Salário'}, freelance:{e:'💻',n:'Freelance'}, investimento:{e:'📈',n:'Investimento'},
-    alimentacao:{e:'🍔',n:'Alimentação'}, transporte:{e:'🚗',n:'Transporte'}, moradia:{e:'🏠',n:'Moradia'},
-    saude:{e:'💊',n:'Saúde'}, lazer:{e:'🎮',n:'Lazer'}, educacao:{e:'📚',n:'Educação'}, outros:{e:'📦',n:'Outros'},
-  };
+  function catMapUI() {
+    return window._catsMgr ? window._catsMgr.getCatMap() : { outros: { emoji: '📦', nome: 'Outros' } };
+  }
 
   function renderTabelaTransacoes(lista) {
     if (!lista) lista = getTransacoes();
@@ -153,12 +151,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (tabela) tabela.style.display = empty ? 'none' : '';
 
     sorted.forEach(t => {
-      const cat = CAT_UI[t.categoria]||CAT_UI.outros;
+      const _cm = catMapUI(); const cat = _cm[t.categoria]||_cm.outros||{emoji:'📦',nome:t.categoria};
       const tr  = document.createElement('tr');
       tr.innerHTML = `
         <td class="td-data">${fmtData(t.data)}</td>
         <td>${esc(t.descricao)}</td>
-        <td><span class="chip-categoria">${cat.e} ${cat.n}</span></td>
+        <td><span class="chip-categoria">${cat.emoji} ${cat.nome}</span></td>
         <td><span class="badge badge--${t.tipo}">${t.tipo==='receita'?'↑':'↓'} ${t.tipo}</span></td>
         <td class="td-valor valor-${t.tipo}">${t.tipo==='receita'?'+':'−'} ${moeda(t.valor)}</td>
         <td class="td-acoes">
@@ -390,11 +388,11 @@ document.addEventListener('DOMContentLoaded', () => {
       else {
         if(relVaz) relVaz.style.display='none';
         entradas.forEach(([cat,v])=>{
-          const info = CAT_UI[cat]||CAT_UI.outros;
+          const _cm3 = catMapUI(); const info = _cm3[cat]||_cm3.outros||{emoji:'📦',nome:cat};
           const saldo = v.rec-v.des, max = Math.max(v.rec,v.des,1);
           const row = document.createElement('div'); row.className='rel-cat-row';
           row.innerHTML=`
-            <div class="rel-cat-nome"><span class="rel-cat-emoji">${info.e}</span><span>${info.n}</span></div>
+            <div class="rel-cat-nome"><span class="rel-cat-emoji">${info.emoji}</span><span>${info.nome}</span></div>
             <div class="rel-cat-barras">
               <div class="rel-barra-wrap"><div class="rel-barra rel-barra--receita" style="width:${(v.rec/max*100).toFixed(1)}%"></div></div>
               <div class="rel-barra-wrap"><div class="rel-barra rel-barra--despesa" style="width:${(v.des/max*100).toFixed(1)}%"></div></div>
@@ -430,9 +428,9 @@ document.addEventListener('DOMContentLoaded', () => {
           ctx2.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--surface-raised').trim()||'#131622';
           ctx2.fill();
           ang+=fatia;
-          const c=CAT_UI[cat]||CAT_UI.outros,pct=((val/total)*100).toFixed(1);
+          const _cm4=catMapUI(); const c=_cm4[cat]||_cm4.outros||{emoji:'📦',nome:cat},pct=((val/total)*100).toFixed(1);
           const li=document.createElement('div');li.className='legenda-item';
-          li.innerHTML=`<span class="legenda-cor" style="background:${cor}"></span><span>${c.e} ${c.n} (${pct}%)</span>`;
+          li.innerHTML=`<span class="legenda-cor" style="background:${cor}"></span><span>${c.emoji} ${c.nome} (${pct}%)</span>`;
           leg2.appendChild(li);
         });
         ctx2.font=`700 13px 'Plus Jakarta Sans',sans-serif`;
