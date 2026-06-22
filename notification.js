@@ -1,7 +1,6 @@
 /* ══════════════════════════════════════════════
    MONEY360 — notification.js
    Push notifications: assinaturas + motivacionais
-   Deve ser carregado APÓS auth.js.
 ══════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -24,6 +23,11 @@
     return ('Notification' in window)
       && Notification.permission === 'granted'
       && !!getSettings().ativo;
+  }
+
+  function tipoAtivo(tipo) {
+    const s = getSettings();
+    return s.tipos?.[tipo] !== false; // default = true
   }
 
   /* ── IndexedDB (para o SW acessar os dados) ─ */
@@ -60,11 +64,9 @@
 
   function diasAteVencimento(diaVenc) {
     const hoje = new Date();
-    const hd   = hoje.getDate();
     const cand = new Date(hoje.getFullYear(), hoje.getMonth(), diaVenc);
-    if (diaVenc < hd) cand.setMonth(cand.getMonth() + 1);
-    const diff = Math.round((cand - hoje) / 86400000);
-    return diff;
+    if (diaVenc < hoje.getDate()) cand.setMonth(cand.getMonth() + 1);
+    return Math.round((cand - hoje) / 86400000);
   }
 
   /* ── Gerar mensagem motivacional ───────────── */
@@ -75,10 +77,9 @@
     const candidatas  = [];
 
     if (transacoes.length) {
-      const rec  = transacoes.filter(t => t.tipo === 'receita').reduce((a, t) => a + t.valor, 0);
-      const desp = transacoes.filter(t => t.tipo === 'despesa').reduce((a, t) => a + t.valor, 0);
+      const rec   = transacoes.filter(t => t.tipo === 'receita').reduce((a, t) => a + t.valor, 0);
+      const desp  = transacoes.filter(t => t.tipo === 'despesa').reduce((a, t) => a + t.valor, 0);
       const saldo = rec - desp;
-      const fmt   = v => 'R$ ' + v.toFixed(2).replace('.', ',');
 
       if (rec > 0 && saldo > 0) {
         const pct = Math.round((saldo / rec) * 100);
@@ -99,15 +100,15 @@
         }
       }
 
-      if (saldo > 0) {
-        const dias = Math.round(saldo / (desp / 30 || 1));
+      if (saldo > 0 && desp > 0) {
+        const dias = Math.round(saldo / (desp / 30));
         if (dias > 5) candidatas.push(`Com seu saldo atual você consegue se manter por ~${dias} dias. Ótimo colchão! 💪`);
       }
     }
 
     if (assinaturas.length) {
-      const totalAss = assinaturas.reduce((a, s) => a + (s.valor || 0), 0);
-      candidatas.push(`Suas ${assinaturas.length} assinatura${assinaturas.length > 1 ? 's' : ''} somam R$ ${totalAss.toFixed(2).replace('.', ',')} por mês. Vale revisar? 🤔`);
+      const tot = assinaturas.reduce((a, s) => a + (s.valor || 0), 0);
+      candidatas.push(`Suas ${assinaturas.length} assinatura${assinaturas.length > 1 ? 's' : ''} somam R$ ${tot.toFixed(2).replace('.', ',')} por mês. Vale revisar? 🤔`);
     }
 
     const genericas = [
@@ -120,7 +121,7 @@
     return candidatas[Math.floor(Math.random() * candidatas.length)] || null;
   }
 
-  /* ── Exibir notificação (via SW ou diretamente) */
+  /* ── Exibir notificação ─────────────────────── */
 
   function mostrarNotificacao(titulo, corpo, tag) {
     if (Notification.permission !== 'granted') return;
@@ -144,10 +145,10 @@
     const hoje     = new Date().toISOString().split('T')[0];
     settings.enviadas = settings.enviadas || {};
 
-    // Limpa entradas antigas (mantém só os últimos 60 dias)
-    Object.keys(settings.enviadas).forEach(k => {
-      if (k < hoje.slice(0, 8) + '00') delete settings.enviadas[k];
-    });
+    // Limpa entradas com mais de 60 dias
+    const corte = new Date(); corte.setDate(corte.getDate() - 60);
+    const corteStr = corte.toISOString().split('T')[0];
+    Object.keys(settings.enviadas).forEach(k => { if (k < corteStr) delete settings.enviadas[k]; });
 
     const assinaturas = JSON.parse(localStorage.getItem(ASS_KEY) || '[]');
 
@@ -155,14 +156,14 @@
       if (!ass.vencimento) return;
       const diff = diasAteVencimento(ass.vencimento);
 
-      if (diff === 0) {
+      if (diff === 0 && tipoAtivo('cobranca')) {
         const chave = `cob-${ass.id}-${hoje}`;
         if (!settings.enviadas[chave]) {
           mostrarNotificacao(`💳 Cobrança hoje: ${ass.nome}`,
             `R$ ${(ass.valor || 0).toFixed(2).replace('.', ',')} será cobrado hoje.`, chave);
           settings.enviadas[chave] = true;
         }
-      } else if (diff === 7) {
+      } else if (diff === 7 && tipoAtivo('vencimento')) {
         const chave = `prev-${ass.id}-${hoje}`;
         if (!settings.enviadas[chave]) {
           mostrarNotificacao(`📅 Vence em 7 dias: ${ass.nome}`,
@@ -172,8 +173,7 @@
       }
     });
 
-    // Motivacional (uma por dia)
-    if (settings.ultimaMotivacional !== hoje) {
+    if (tipoAtivo('motivacional') && settings.ultimaMotivacional !== hoje) {
       const msg = gerarMotivacional();
       if (msg) {
         mostrarNotificacao('💡 Money360', msg, 'motivacional');
@@ -184,23 +184,23 @@
     saveSettings(settings);
   }
 
-  /* ── Ativar notificações ────────────────────── */
+  /* ── Ativar ─────────────────────────────────── */
 
   async function ativar() {
     if (!('Notification' in window)) {
-      alert('Seu navegador não suporta notificações.');
+      alert('Seu navegador não suporta notificações push.');
       return false;
     }
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') {
-      alert('Permissão negada. Ative as notificações nas configurações do navegador/sistema.');
+      alert('Permissão negada. Ative as notificações nas configurações do navegador.');
       return false;
     }
     const s = getSettings();
     s.ativo = true;
+    if (!s.tipos) s.tipos = { cobranca: true, vencimento: true, motivacional: true };
     saveSettings(s);
 
-    // Periodic Background Sync (Android Chrome com PWA instalado)
     try {
       if ('periodicSync' in ServiceWorkerRegistration.prototype) {
         const reg = await navigator.serviceWorker.ready;
@@ -209,45 +209,111 @@
     } catch {}
 
     await syncParaIDB().catch(() => {});
-    verificarNotificacoes();
     atualizarUI();
+    verificarNotificacoes();
     return true;
   }
 
   function desativar() {
-    const s = getSettings();
-    s.ativo = false;
-    saveSettings(s);
+    const s = getSettings(); s.ativo = false; saveSettings(s);
     atualizarUI();
   }
 
-  /* ── Atualiza o painel de Configurações ─────── */
+  /* ── UI ─────────────────────────────────────── */
 
   function atualizarUI() {
-    const label = document.getElementById('notif-status-label');
     const btn   = document.getElementById('btn-toggle-notif');
+    const chip  = document.getElementById('notif-status-chip');
     const tipos = document.getElementById('notif-tipos');
+    const teste = document.getElementById('notif-teste');
     if (!btn) return;
-    const ativo = isAtivo();
-    if (label) label.textContent = ativo ? 'Ativadas ✅' : ('Notification' in window && Notification.permission === 'denied' ? 'Bloqueadas pelo sistema' : 'Desativadas');
-    btn.textContent = ativo ? 'Desativar' : 'Ativar';
-    btn.className   = ativo ? 'btn-danger' : 'btn-secundario';
+
+    const permBloq = 'Notification' in window && Notification.permission === 'denied';
+    const ativo    = isAtivo();
+
+    // Botão
+    btn.textContent = ativo ? '🔕 Desativar Notificações' : '🔔 Ativar Notificações';
+    btn.className   = ativo ? 'btn-notif-ativar btn-notif-ativar--desativar' : 'btn-notif-ativar';
+    btn.disabled    = permBloq && !ativo;
+
+    // Chip de status
+    if (chip) {
+      chip.textContent  = ativo ? '✅ Ativo' : (permBloq ? '🚫 Bloqueado' : '○ Desativado');
+      chip.className    = 'notif-chip' + (ativo ? ' notif-chip--on' : '');
+    }
+
+    // Seções
     if (tipos) tipos.style.display = ativo ? '' : 'none';
+    if (teste) teste.style.display = ativo ? '' : 'none';
+
+    if (ativo) sincronizarCheckboxes();
+  }
+
+  function sincronizarCheckboxes() {
+    const s = getSettings();
+    const tipos = s.tipos || { cobranca: true, vencimento: true, motivacional: true };
+    ['cobranca', 'vencimento', 'motivacional'].forEach(t => {
+      const chk = document.getElementById(`notif-chk-${t}`);
+      if (chk) chk.checked = tipos[t] !== false;
+    });
+  }
+
+  function salvarTipo(tipo, valor) {
+    const s = getSettings();
+    if (!s.tipos) s.tipos = { cobranca: true, vencimento: true, motivacional: true };
+    s.tipos[tipo] = valor;
+    saveSettings(s);
+  }
+
+  /* ── Teste ──────────────────────────────────── */
+
+  function testarCobranca() {
+    const assinaturas = JSON.parse(localStorage.getItem(ASS_KEY) || '[]');
+    if (assinaturas.length) {
+      const ass = assinaturas[0];
+      mostrarNotificacao(`💳 Cobrança hoje: ${ass.nome}`,
+        `R$ ${(ass.valor || 0).toFixed(2).replace('.', ',')} será cobrado hoje.`, 'teste-cob');
+    } else {
+      mostrarNotificacao('💳 Cobrança hoje: Netflix', 'R$ 55,90 será cobrado hoje.', 'teste-cob');
+    }
+  }
+
+  function testarVencimento() {
+    const assinaturas = JSON.parse(localStorage.getItem(ASS_KEY) || '[]');
+    if (assinaturas.length) {
+      const ass = assinaturas[0];
+      mostrarNotificacao(`📅 Vence em 7 dias: ${ass.nome}`,
+        `R$ ${(ass.valor || 0).toFixed(2).replace('.', ',')} será cobrado no dia ${ass.vencimento || '—'}.`, 'teste-prev');
+    } else {
+      mostrarNotificacao('📅 Vence em 7 dias: Spotify', 'R$ 21,90 será cobrado no dia 29.', 'teste-prev');
+    }
+  }
+
+  function testarMotivacional() {
+    const msg = gerarMotivacional() || 'Continue assim! Você está no caminho certo 💪';
+    mostrarNotificacao('💡 Money360', msg, 'teste-motiv');
   }
 
   /* ── DOMContentLoaded ───────────────────────── */
 
   document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('btn-toggle-notif');
-    if (btn) {
-      btn.addEventListener('click', async () => {
-        if (isAtivo()) {
-          desativar();
-        } else {
-          await ativar();
-        }
+    // Botão principal ativar/desativar
+    document.getElementById('btn-toggle-notif')?.addEventListener('click', async () => {
+      isAtivo() ? desativar() : await ativar();
+    });
+
+    // Checkboxes individuais
+    ['cobranca', 'vencimento', 'motivacional'].forEach(tipo => {
+      document.getElementById(`notif-chk-${tipo}`)?.addEventListener('change', e => {
+        salvarTipo(tipo, e.target.checked);
       });
-    }
+    });
+
+    // Botões de teste
+    document.getElementById('btn-teste-cobranca')?.addEventListener('click',    testarCobranca);
+    document.getElementById('btn-teste-vencimento')?.addEventListener('click',  testarVencimento);
+    document.getElementById('btn-teste-motivacional')?.addEventListener('click', testarMotivacional);
+
     atualizarUI();
     window._notif = { verificar: verificarNotificacoes, ativar, desativar, isAtivo, atualizarUI, syncParaIDB };
   });

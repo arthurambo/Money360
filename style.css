@@ -445,3 +445,77 @@ html.claro .auth-screen::before,html.claro .auth-screen::after{opacity:.18;}
   .toast{left:16px;right:16px;transform:translateY(20px);white-space:normal;text-align:center;}
   .toast--show{transform:translateY(0);}
 }
+
+/* ══════════════════════════════════════════════
+   Notificações Push — painel Configurações
+══════════════════════════════════════════════ */
+
+/* Cabeçalho do dispositivo */
+.notif-device{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:16px 0;border-bottom:1px solid var(--border-subtle);}
+.notif-device-info{display:flex;flex-direction:column;gap:3px;}
+.notif-device-titulo{font-size:.9rem;font-weight:600;color:var(--text-primary);}
+.notif-device-desc{font-size:.78rem;color:var(--text-muted);}
+.notif-device-acoes{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+
+/* Botão ativar/desativar */
+.btn-notif-ativar{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 18px;border-radius:var(--r-md);border:none;cursor:pointer;
+  font-size:.82rem;font-weight:700;letter-spacing:.3px;
+  background:var(--brand-grad);color:#fff;
+  box-shadow:var(--shadow-glow-violet);
+  transition:opacity .15s,transform .1s;}
+.btn-notif-ativar:hover{opacity:.9;transform:translateY(-1px);}
+.btn-notif-ativar:active{transform:translateY(0);}
+.btn-notif-ativar:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.btn-notif-ativar--desativar{background:linear-gradient(135deg,#e74c3c,#c0392b);box-shadow:none;}
+
+/* Chip de status */
+.notif-chip{display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:100px;font-size:.72rem;font-weight:700;letter-spacing:.4px;
+  background:var(--surface-sunken);color:var(--text-muted);}
+.notif-chip--on{background:rgba(52,211,153,.15);color:#34d399;}
+
+/* Título de seção */
+.notif-secao-titulo{font-size:.65rem;font-weight:800;letter-spacing:1px;
+  color:var(--text-muted);text-transform:uppercase;margin:18px 0 10px;}
+
+/* Itens de tipo de notificação */
+.notif-tipo-item{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:12px 0;border-bottom:1px solid var(--border-subtle);}
+.notif-tipo-item:last-child{border-bottom:none;}
+.notif-tipo-info{display:flex;flex-direction:column;gap:2px;}
+.notif-tipo-nome{font-size:.85rem;font-weight:600;color:var(--text-primary);}
+.notif-tipo-desc{font-size:.76rem;color:var(--text-muted);}
+
+/* Toggle switch */
+.toggle-switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute;}
+.toggle-slider{
+  position:absolute;inset:0;cursor:pointer;
+  background:var(--surface-sunken);border-radius:100px;
+  transition:background .2s;}
+.toggle-slider::before{
+  content:'';position:absolute;left:3px;top:3px;
+  width:18px;height:18px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);
+  transition:transform .2s;}
+.toggle-switch input:checked + .toggle-slider{background:var(--brand-grad);}
+.toggle-switch input:checked + .toggle-slider::before{transform:translateX(20px);}
+
+/* Botões de teste */
+.notif-teste-btns{display:flex;flex-direction:column;gap:8px;}
+.notif-teste-btns button{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 14px;border-radius:var(--r-sm);border:1px solid var(--border-subtle);
+  background:var(--surface-raised);color:var(--text-primary);
+  font-size:.82rem;font-weight:600;cursor:pointer;
+  transition:background .15s,border-color .15s;}
+.notif-teste-btns button:hover{background:var(--surface-sunken);border-color:var(--brand);}
+
+@media(max-width:640px){
+  .notif-device{flex-direction:column;align-items:flex-start;}
+  .notif-device-acoes{align-items:flex-start;width:100%;}
+  .btn-notif-ativar{width:100%;justify-content:center;}
+}

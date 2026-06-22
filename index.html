@@ -352,23 +352,57 @@
         <div class="page-header"><div><h1 class="page-title">Configurações</h1><p class="page-sub">Personalize seu aplicativo</p></div></div>
         <div class="config-grid">
           <div class="painel"><div class="painel-header"><h3 class="painel-titulo">Conta</h3></div><div class="config-opcao"><div class="config-opcao-info"><span class="config-opcao-nome">Logado como</span><span class="config-opcao-desc" id="config-user-email">—</span></div><button class="btn-danger" id="btn-sair">⎋ Sair</button></div></div>
-          <div class="painel">
-            <div class="painel-header"><h3 class="painel-titulo">Notificações</h3></div>
-            <div class="config-opcao">
-              <div class="config-opcao-info">
-                <span class="config-opcao-nome">Push Notifications</span>
-                <span class="config-opcao-desc" id="notif-status-label">Desativadas</span>
+          <div class="painel painel--full notif-painel">
+            <div class="painel-header"><h3 class="painel-titulo">🔔 Notificações Push</h3></div>
+
+            <!-- Ativar / status -->
+            <div class="notif-device">
+              <div class="notif-device-info">
+                <span class="notif-device-titulo">Notificações no Dispositivo</span>
+                <span class="notif-device-desc">Receba alertas mesmo com o app fechado</span>
               </div>
-              <button class="btn-secundario" id="btn-toggle-notif">Ativar</button>
+              <div class="notif-device-acoes">
+                <button id="btn-toggle-notif" class="btn-notif-ativar">🔔 Ativar Notificações</button>
+                <span id="notif-status-chip" class="notif-chip">○ Desativado</span>
+              </div>
             </div>
-            <div class="config-opcao" id="notif-tipos" style="display:none">
-              <div class="config-opcao-info">
-                <span class="config-opcao-nome">O que você vai receber</span>
-                <span class="config-opcao-desc">
-                  📅 Aviso 7 dias antes da cobrança de cada assinatura<br>
-                  💳 Aviso no dia da cobrança<br>
-                  💡 Dica motivacional diária com base nos seus dados
-                </span>
+
+            <!-- Quais tipos receber -->
+            <div id="notif-tipos" style="display:none">
+              <p class="notif-secao-titulo">QUAIS NOTIFICAÇÕES RECEBER:</p>
+
+              <div class="notif-tipo-item">
+                <div class="notif-tipo-info">
+                  <span class="notif-tipo-nome">💳 Cobranças do Dia</span>
+                  <span class="notif-tipo-desc">Aviso quando uma assinatura é cobrada hoje</span>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" id="notif-chk-cobranca" /><span class="toggle-slider"></span></label>
+              </div>
+
+              <div class="notif-tipo-item">
+                <div class="notif-tipo-info">
+                  <span class="notif-tipo-nome">📅 Vencimentos Próximos</span>
+                  <span class="notif-tipo-desc">Aviso 7 dias antes de uma cobrança</span>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" id="notif-chk-vencimento" /><span class="toggle-slider"></span></label>
+              </div>
+
+              <div class="notif-tipo-item">
+                <div class="notif-tipo-info">
+                  <span class="notif-tipo-nome">💡 Dicas Motivacionais</span>
+                  <span class="notif-tipo-desc">Uma dica por dia com base nos seus dados</span>
+                </div>
+                <label class="toggle-switch"><input type="checkbox" id="notif-chk-motivacional" /><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+
+            <!-- Seção de teste -->
+            <div id="notif-teste" style="display:none">
+              <p class="notif-secao-titulo">TESTAR AGORA:</p>
+              <div class="notif-teste-btns">
+                <button id="btn-teste-cobranca"    class="btn-secundario">💳 Simular cobrança hoje</button>
+                <button id="btn-teste-vencimento"  class="btn-secundario">📅 Simular vence em 7 dias</button>
+                <button id="btn-teste-motivacional" class="btn-secundario">💡 Enviar motivacional</button>
               </div>
             </div>
           </div>
