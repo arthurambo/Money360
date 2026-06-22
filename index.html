@@ -352,6 +352,26 @@
         <div class="page-header"><div><h1 class="page-title">Configurações</h1><p class="page-sub">Personalize seu aplicativo</p></div></div>
         <div class="config-grid">
           <div class="painel"><div class="painel-header"><h3 class="painel-titulo">Conta</h3></div><div class="config-opcao"><div class="config-opcao-info"><span class="config-opcao-nome">Logado como</span><span class="config-opcao-desc" id="config-user-email">—</span></div><button class="btn-danger" id="btn-sair">⎋ Sair</button></div></div>
+          <div class="painel">
+            <div class="painel-header"><h3 class="painel-titulo">Notificações</h3></div>
+            <div class="config-opcao">
+              <div class="config-opcao-info">
+                <span class="config-opcao-nome">Push Notifications</span>
+                <span class="config-opcao-desc" id="notif-status-label">Desativadas</span>
+              </div>
+              <button class="btn-secundario" id="btn-toggle-notif">Ativar</button>
+            </div>
+            <div class="config-opcao" id="notif-tipos" style="display:none">
+              <div class="config-opcao-info">
+                <span class="config-opcao-nome">O que você vai receber</span>
+                <span class="config-opcao-desc">
+                  📅 Aviso 7 dias antes da cobrança de cada assinatura<br>
+                  💳 Aviso no dia da cobrança<br>
+                  💡 Dica motivacional diária com base nos seus dados
+                </span>
+              </div>
+            </div>
+          </div>
           <div class="painel"><div class="painel-header"><h3 class="painel-titulo">Aparência</h3></div><div class="config-opcao"><div class="config-opcao-info"><span class="config-opcao-nome">Tema atual</span><span class="config-opcao-desc" id="config-tema-label">Escuro</span></div><button class="btn-secundario" id="btn-tema-config2">Alternar</button></div></div>
           <div class="painel"><div class="painel-header"><h3 class="painel-titulo">Dados</h3></div><div class="config-opcao"><div class="config-opcao-info"><span class="config-opcao-nome">Exportar dados</span><span class="config-opcao-desc">Baixar todos os dados em JSON</span></div><button class="btn-secundario" id="btn-exportar">⬇ Exportar</button></div><div class="config-opcao"><div class="config-opcao-info"><span class="config-opcao-nome">Importar dados</span><span class="config-opcao-desc">Carregar JSON</span></div><label class="btn-secundario" style="cursor:pointer">⬆ Importar<input type="file" id="btn-importar" accept=".json" style="display:none" /></label></div><div class="config-opcao config-opcao--danger"><div class="config-opcao-info"><span class="config-opcao-nome">Apagar tudo</span><span class="config-opcao-desc">Remove todas as transações</span></div><button class="btn-danger" id="btn-limpar-tudo-config">🗑 Apagar</button></div></div>
           <div class="painel painel--sobre"><div class="painel-header"><h3 class="painel-titulo">Sobre</h3></div><div class="sobre-content"><svg class="sobre-logo" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="12" fill="url(#bg2)"/><path d="M9 15C9 13.343 10.343 12 12 12H28C29.657 12 31 13.343 31 15V26C31 27.657 29.657 29 28 29H12C10.343 29 9 27.657 9 26V15Z" stroke="white" stroke-width="1.8" fill="none"/><path d="M9 17H31" stroke="white" stroke-width="1.8"/><circle cx="26" cy="23" r="1.8" fill="white"/><defs><linearGradient id="bg2" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#7C6FF7"/><stop offset="1" stop-color="#2EC4B6"/></linearGradient></defs></svg><h4 class="sobre-nome">Money360</h4><p class="sobre-versao">Versão: Beta 1.0</p><p class="sobre-desc">Dados salvos localmente no navegador.</p></div></div>
@@ -415,6 +435,7 @@
 
   <script src="categories.js"></script>
   <script src="auth.js"></script>
+  <script src="notification.js"></script>
   <script src="sync.js"></script>
   <script src="script.js"></script>
   <script src="ui.js"></script>

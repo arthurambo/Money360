@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function mostrarApp() {
     authScreen.style.display = 'none';
     appScreen.style.display  = '';
+    setTimeout(() => window._notif?.verificar(), 1500);
   }
 
   function mostrarAuth() {
