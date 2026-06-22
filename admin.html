@@ -147,7 +147,7 @@
 </div>
 
 <!-- ── Admin panel ────────────────────────── -->
-<div id="panel">
+<div id="panel" style="display:none">
 
   <header class="adm-header">
     <div class="adm-header-l">
@@ -295,30 +295,24 @@ $$;`;
     const { data, error } = await sb.rpc('admin_get_users');
 
     if (error) {
-      const needSetup = error.code === 'PGRST202' || error.code === '42883'
-        || (error.message || '').toLowerCase().includes('function')
-        || (error.message || '').toLowerCase().includes('could not find')
-        || error.hint?.toLowerCase().includes('function');
-      if (needSetup) {
-        el.innerHTML = `
-          <div class="setup-notice">
-            <p style="font-size:1.8rem;margin-bottom:10px">⚙️</p>
-            <h3>Configure o acesso no Supabase</h3>
-            <p>Execute o SQL abaixo no <b>SQL Editor</b> do seu projeto para habilitar a listagem de usuários:</p>
-            <div class="setup-sql" id="setup-sql-block">${escHtml(SETUP_SQL)}</div>
-            <button class="setup-copy" onclick="copiarSQL()">📋 Copiar SQL</button>
-            <p style="margin-top:16px;font-size:.78rem;color:var(--text-muted)">
-              Depois de executar, recarregue a página.
-            </p>
-          </div>`;
-        window.copiarSQL = () => {
-          navigator.clipboard.writeText(SETUP_SQL)
-            .then(() => { document.querySelector('.setup-copy').textContent = '✅ Copiado!'; })
-            .catch(() => {});
-        };
-      } else {
-        el.innerHTML = `<div class="empty">❌ Erro: ${escHtml(error.message)}</div>`;
-      }
+      // Mostra o bloco de setup para qualquer erro de RPC
+      // (função inexistente retorna 400/404 com vários códigos possíveis)
+      el.innerHTML = `
+        <div class="setup-notice">
+          <p style="font-size:1.8rem;margin-bottom:10px">⚙️</p>
+          <h3>Configure o acesso no Supabase</h3>
+          <p>Execute o SQL abaixo no <b>SQL Editor</b> do seu projeto Supabase e recarregue a página:</p>
+          <div class="setup-sql">${escHtml(SETUP_SQL)}</div>
+          <button class="setup-copy" id="btn-copy-sql">📋 Copiar SQL</button>
+          <p style="margin-top:12px;font-size:.75rem;color:var(--text-muted)">
+            Erro técnico: ${escHtml(error.message || error.code || 'desconhecido')}
+          </p>
+        </div>`;
+      document.getElementById('btn-copy-sql').addEventListener('click', () => {
+        navigator.clipboard.writeText(SETUP_SQL)
+          .then(() => { document.getElementById('btn-copy-sql').textContent = '✅ Copiado!'; })
+          .catch(() => {});
+      });
       return;
     }
 
