@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel Admin — Money360</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    :root {
+      --bg:             #0f0f1a;
+      --surface:        #16162a;
+      --surface-raised: #1e1e35;
+      --border:         rgba(255,255,255,.07);
+      --text:           #e8e8f0;
+      --text-muted:     #7878a0;
+      --brand:          #7C6FF7;
+      --brand-grad:     linear-gradient(135deg,#7C6FF7,#2EC4B6);
+      --danger:         #e74c3c;
+      --success:        #2ecc71;
+      --r:              12px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;min-height:100vh;}
+
+    /* ── Gate ─────────────────────────────── */
+    #gate{display:flex;align-items:center;justify-content:center;min-height:100vh;}
+    .gate-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;
+      padding:44px 40px;text-align:center;max-width:400px;width:100%;margin:24px;}
+    .gate-icon{font-size:2.4rem;margin-bottom:14px;}
+    .gate-title{font-size:1.2rem;font-weight:800;margin-bottom:6px;}
+    .gate-msg{font-size:.85rem;color:var(--text-muted);line-height:1.6;margin-bottom:20px;}
+    .gate-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;
+      background:var(--surface-raised);border:1px solid var(--border);border-radius:var(--r);
+      color:var(--text-muted);font-size:.82rem;cursor:pointer;text-decoration:none;}
+    .gate-btn:hover{border-color:var(--brand);color:var(--brand);}
+
+    /* ── Header ───────────────────────────── */
+    #panel{display:none;}
+    .adm-header{display:flex;align-items:center;justify-content:space-between;gap:16px;
+      padding:18px 32px;background:var(--surface);border-bottom:1px solid var(--border);}
+    .adm-header-l{display:flex;align-items:center;gap:12px;}
+    .adm-crown{font-size:1.5rem;}
+    .adm-title{font-size:1.35rem;font-weight:900;background:var(--brand-grad);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+    .adm-subtitle{font-size:.78rem;color:var(--text-muted);margin-top:1px;}
+    .adm-header-r{display:flex;align-items:center;gap:10px;}
+    .adm-user-email{font-size:.78rem;color:var(--text-muted);}
+    .btn-signout{padding:7px 14px;background:none;border:1px solid var(--border);
+      border-radius:8px;color:var(--text-muted);font-size:.78rem;cursor:pointer;transition:.15s;}
+    .btn-signout:hover{border-color:var(--danger);color:var(--danger);}
+
+    /* ── Nav tabs ─────────────────────────── */
+    .adm-nav{background:var(--surface);padding:0 32px;border-bottom:1px solid var(--border);}
+    .adm-tabs{display:flex;gap:0;}
+    .adm-tab{padding:13px 22px;background:none;border:none;border-bottom:2px solid transparent;
+      color:var(--text-muted);font-size:.875rem;font-weight:600;cursor:pointer;
+      margin-bottom:-1px;transition:color .15s,border-color .15s;}
+    .adm-tab:hover{color:var(--text);}
+    .adm-tab--on{color:var(--brand);border-bottom-color:var(--brand);}
+
+    /* ── Content ──────────────────────────── */
+    .adm-body{padding:28px 32px;max-width:1120px;}
+    .adm-view{display:none;}
+    .adm-view--on{display:block;}
+
+    /* ── Section headers ──────────────────── */
+    .sec-hd{display:flex;align-items:center;gap:10px;margin-bottom:14px;margin-top:24px;}
+    .sec-hd:first-child{margin-top:0;}
+    .sec-hd-title{font-size:.84rem;font-weight:800;color:var(--brand);}
+    .sec-hd-sub{font-size:.72rem;color:var(--text-muted);}
+    .badge{background:rgba(124,111,247,.15);color:var(--brand);
+      padding:3px 9px;border-radius:100px;font-size:.72rem;font-weight:700;}
+    .badge--green{background:rgba(46,204,113,.12);color:var(--success);}
+
+    /* ── Stat cards ───────────────────────── */
+    .stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:4px;}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+      padding:18px 14px;text-align:center;}
+    .stat-ico{font-size:1.7rem;margin-bottom:8px;}
+    .stat-num{font-size:1.9rem;font-weight:900;line-height:1;}
+    .stat-lbl{font-size:.7rem;color:var(--text-muted);margin-top:5px;line-height:1.4;}
+    .stat-sub{font-size:.62rem;color:var(--text-muted);margin-top:2px;opacity:.7;}
+
+    /* ── Chart ────────────────────────────── */
+    .chart-wrap{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:18px 18px 10px;margin-top:0;}
+    #adm-chart{width:100%;display:block;}
+    .chart-leg{font-size:.7rem;color:var(--text-muted);text-align:center;margin-top:6px;}
+
+    /* ── User list ────────────────────────── */
+    .user-list{display:flex;flex-direction:column;gap:10px;}
+    .user-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+      padding:16px 20px;}
+    .user-card-top{display:flex;align-items:center;gap:14px;}
+    .user-av{width:42px;height:42px;border-radius:50%;background:var(--brand-grad);
+      display:flex;align-items:center;justify-content:center;
+      font-size:1rem;font-weight:800;color:#fff;flex-shrink:0;}
+    .user-info{flex:1;min-width:0;}
+    .user-email{font-weight:700;font-size:.88rem;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .user-meta{display:flex;flex-wrap:wrap;gap:12px;margin-top:4px;
+      font-size:.72rem;color:var(--text-muted);}
+    .user-id{font-family:monospace;font-size:.62rem;color:var(--text-muted);
+      opacity:.55;margin-top:3px;}
+
+    /* ── Setup notice ─────────────────────── */
+    .setup-notice{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:28px 24px;text-align:center;}
+    .setup-notice h3{margin-bottom:8px;}
+    .setup-notice p{font-size:.83rem;color:var(--text-muted);line-height:1.7;margin-bottom:14px;}
+    .setup-sql{background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:8px;
+      padding:14px 16px;font-family:monospace;font-size:.72rem;text-align:left;
+      white-space:pre-wrap;word-break:break-all;color:#a8d8a8;overflow-x:auto;}
+    .setup-copy{margin-top:10px;padding:8px 16px;background:var(--brand-grad);border:none;
+      border-radius:8px;color:#fff;font-size:.78rem;font-weight:700;cursor:pointer;}
+
+    /* ── Loading / empty ──────────────────── */
+    .loading{padding:40px;text-align:center;color:var(--text-muted);font-size:.88rem;}
+    .empty{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+      padding:28px;text-align:center;color:var(--text-muted);font-size:.85rem;}
+
+    /* ── Responsive ───────────────────────── */
+    @media(max-width:900px){
+      .stats-grid{grid-template-columns:repeat(3,1fr);}
+    }
+    @media(max-width:680px){
+      .adm-header{padding:14px 18px;}
+      .adm-nav{padding:0 18px;}
+      .adm-body{padding:18px;}
+      .adm-tab{padding:11px 14px;font-size:.8rem;}
+      .stats-grid{grid-template-columns:repeat(2,1fr);}
+      .adm-user-email{display:none;}
+      .adm-title{font-size:1.1rem;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Auth gate ──────────────────────────── -->
+<div id="gate">
+  <div class="gate-box">
+    <div class="gate-icon">🔒</div>
+    <div class="gate-title">Acesso Restrito</div>
+    <div class="gate-msg" id="gate-msg">Verificando sessão...</div>
+    <a class="gate-btn" href="./">← Voltar ao app</a>
+  </div>
+</div>
+
+<!-- ── Admin panel ────────────────────────── -->
+<div id="panel">
+
+  <header class="adm-header">
+    <div class="adm-header-l">
+      <span class="adm-crown">👑</span>
+      <div>
+        <div class="adm-title">Painel Admin</div>
+        <div class="adm-subtitle">Moderação e gerenciamento</div>
+      </div>
+    </div>
+    <div class="adm-header-r">
+      <span class="adm-user-email" id="adm-email"></span>
+      <button class="btn-signout" id="btn-signout">Sair</button>
+    </div>
+  </header>
+
+  <nav class="adm-nav">
+    <div class="adm-tabs">
+      <button class="adm-tab adm-tab--on" data-tab="usuarios">👥 Usuários</button>
+      <button class="adm-tab" data-tab="estatisticas">📊 Estatísticas</button>
+    </div>
+  </nav>
+
+  <main class="adm-body">
+
+    <!-- Usuários -->
+    <div id="tab-usuarios" class="adm-view adm-view--on">
+      <div class="sec-hd">
+        <span class="sec-hd-title">👥 Todos os Usuários</span>
+        <span class="badge" id="user-count">—</span>
+      </div>
+      <div id="user-list"></div>
+    </div>
+
+    <!-- Estatísticas -->
+    <div id="tab-estatisticas" class="adm-view">
+
+      <div class="sec-hd"><span class="sec-hd-title">👥 Total de Usuários</span></div>
+      <div class="stats-grid" style="margin-bottom:22px">
+        <div class="stat-card"><div class="stat-ico">👥</div><div class="stat-num" id="s-total">—</div><div class="stat-lbl">Total cadastrados</div><div class="stat-sub">todos os tempos</div></div>
+        <div class="stat-card"><div class="stat-ico">✨</div><div class="stat-num" id="s-nhoje">—</div><div class="stat-lbl">Novos hoje</div></div>
+        <div class="stat-card"><div class="stat-ico">📅</div><div class="stat-num" id="s-nsem">—</div><div class="stat-lbl">Novos esta semana</div></div>
+        <div class="stat-card"><div class="stat-ico">🗓️</div><div class="stat-num" id="s-nmes">—</div><div class="stat-lbl">Novos este mês</div></div>
+        <div class="stat-card"><div class="stat-ico">📈</div><div class="stat-num" id="s-nano">—</div><div class="stat-lbl">Novos este ano</div></div>
+      </div>
+
+      <div class="sec-hd">
+        <span class="sec-hd-title">🟢 Usuários Ativos</span>
+        <span class="sec-hd-sub">(por último acesso)</span>
+      </div>
+      <div class="stats-grid" style="margin-bottom:22px">
+        <div class="stat-card"><div class="stat-ico">⚡</div><div class="stat-num" id="s-ahoje">—</div><div class="stat-lbl">Ativos hoje</div><div class="stat-sub">acessaram hoje</div></div>
+        <div class="stat-card"><div class="stat-ico">🔥</div><div class="stat-num" id="s-asem">—</div><div class="stat-lbl">Ativos esta semana</div></div>
+        <div class="stat-card"><div class="stat-ico">✅</div><div class="stat-num" id="s-ames">—</div><div class="stat-lbl">Ativos este mês</div></div>
+        <div class="stat-card"><div class="stat-ico">🌟</div><div class="stat-num" id="s-aano">—</div><div class="stat-lbl">Ativos este ano</div></div>
+        <div class="stat-card"><div class="stat-ico">💤</div><div class="stat-num" id="s-inat">—</div><div class="stat-lbl">Inativos</div><div class="stat-sub">sem acesso este mês</div></div>
+      </div>
+
+      <div class="sec-hd"><span class="sec-hd-title">📅 Novos Usuários — Últimos 30 dias</span></div>
+      <div class="chart-wrap">
+        <canvas id="adm-chart" height="130"></canvas>
+        <div class="chart-leg" id="chart-leg">Cada barra = 1 dia</div>
+      </div>
+
+    </div><!-- /estatisticas -->
+  </main>
+</div><!-- /panel -->
+
+<script>
+(function () {
+  'use strict';
+
+  const SUPABASE_URL      = 'https://rkkterzrriikricxwmzd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJra3Rlcnpycmlpa3JpY3h3bXpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NDI2NjksImV4cCI6MjA5NjUxODY2OX0.e8oZ1fMZEbVmQ31aPwDcq78k9t2Ypg3IZHr7QrHk6e8';
+  const ADMIN_EMAILS      = ['ambrosio.arthur@gmail.com'];
+
+  const SETUP_SQL = `CREATE OR REPLACE FUNCTION admin_get_users()
+RETURNS TABLE(id uuid, email text, created_at timestamptz, last_sign_in_at timestamptz)
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  IF auth.email() NOT IN ('ambrosio.arthur@gmail.com') THEN
+    RAISE EXCEPTION 'Unauthorized';
+  END IF;
+  RETURN QUERY
+    SELECT u.id, u.email, u.created_at, u.last_sign_in_at
+    FROM auth.users u
+    ORDER BY u.created_at DESC;
+END;
+$$;`;
+
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let allUsers = [];
+
+  /* ── Gate ───────────────────────────────── */
+  function showGate(msg) {
+    document.getElementById('gate-msg').textContent = msg;
+    document.getElementById('gate').style.display   = '';
+    document.getElementById('panel').style.display  = 'none';
+  }
+
+  function showPanel(email) {
+    document.getElementById('adm-email').textContent = email;
+    document.getElementById('gate').style.display    = 'none';
+    document.getElementById('panel').style.display   = '';
+  }
+
+  /* ── Init ───────────────────────────────── */
+  async function init() {
+    const { data } = await sb.auth.getSession();
+    const session  = data?.session;
+
+    if (!session) {
+      showGate('Você precisa estar logado para acessar esta página.');
+      return;
+    }
+    if (!ADMIN_EMAILS.includes(session.user.email)) {
+      showGate('Você não tem permissão de administrador.');
+      return;
+    }
+
+    showPanel(session.user.email);
+    loadUsers();
+  }
+
+  document.getElementById('btn-signout').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    window.location.href = './';
+  });
+
+  /* ── Tabs ───────────────────────────────── */
+  document.querySelectorAll('.adm-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.adm-tab').forEach(b => b.classList.remove('adm-tab--on'));
+      document.querySelectorAll('.adm-view').forEach(v => v.classList.remove('adm-view--on'));
+      btn.classList.add('adm-tab--on');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('adm-view--on');
+      if (btn.dataset.tab === 'estatisticas' && allUsers.length) renderStats();
+    });
+  });
+
+  /* ── Load users via RPC ─────────────────── */
+  async function loadUsers() {
+    const el = document.getElementById('user-list');
+    el.innerHTML = '<div class="loading">Carregando usuários...</div>';
+
+    const { data, error } = await sb.rpc('admin_get_users');
+
+    if (error) {
+      const needSetup = error.code === '42883' || (error.message || '').toLowerCase().includes('function');
+      if (needSetup) {
+        el.innerHTML = `
+          <div class="setup-notice">
+            <p style="font-size:1.8rem;margin-bottom:10px">⚙️</p>
+            <h3>Configure o acesso no Supabase</h3>
+            <p>Execute o SQL abaixo no <b>SQL Editor</b> do seu projeto para habilitar a listagem de usuários:</p>
+            <div class="setup-sql" id="setup-sql-block">${escHtml(SETUP_SQL)}</div>
+            <button class="setup-copy" onclick="copiarSQL()">📋 Copiar SQL</button>
+            <p style="margin-top:16px;font-size:.78rem;color:var(--text-muted)">
+              Depois de executar, recarregue a página.
+            </p>
+          </div>`;
+        window.copiarSQL = () => {
+          navigator.clipboard.writeText(SETUP_SQL)
+            .then(() => { document.querySelector('.setup-copy').textContent = '✅ Copiado!'; })
+            .catch(() => {});
+        };
+      } else {
+        el.innerHTML = `<div class="empty">❌ Erro: ${escHtml(error.message)}</div>`;
+      }
+      return;
+    }
+
+    allUsers = data || [];
+    document.getElementById('user-count').textContent = allUsers.length;
+    renderUsers();
+    renderStats();
+  }
+
+  /* ── Render user list ───────────────────── */
+  function renderUsers() {
+    const el = document.getElementById('user-list');
+
+    if (!allUsers.length) {
+      el.innerHTML = '<div class="empty">Nenhum usuário cadastrado.</div>';
+      return;
+    }
+
+    const frag = document.createDocumentFragment();
+    const list = document.createElement('div');
+    list.className = 'user-list';
+
+    allUsers.forEach(u => {
+      const joined = u.created_at
+        ? new Date(u.created_at).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' })
+        : '—';
+      const visto = u.last_sign_in_at ? timeSince(new Date(u.last_sign_in_at)) : 'nunca';
+      const ini   = (u.email || '?')[0].toUpperCase();
+
+      const card = document.createElement('div');
+      card.className = 'user-card';
+      card.innerHTML = `
+        <div class="user-card-top">
+          <div class="user-av">${ini}</div>
+          <div class="user-info">
+            <div class="user-email">${escHtml(u.email || '—')}</div>
+            <div class="user-meta">
+              <span>📅 Entrou em ${joined}</span>
+              <span>🕒 Visto ${visto}</span>
+            </div>
+            <div class="user-id">${u.id || '—'}</div>
+          </div>
+        </div>`;
+      list.appendChild(card);
+    });
+
+    frag.appendChild(list);
+    el.innerHTML = '';
+    el.appendChild(frag);
+  }
+
+  /* ── Render stats ───────────────────────── */
+  function renderStats() {
+    const agora  = new Date();
+    const hoje0  = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+    const semDia = hoje0.getDay();
+    const sem0   = new Date(hoje0); sem0.setDate(hoje0.getDate() - semDia);
+    const mes0   = new Date(agora.getFullYear(), agora.getMonth(), 1);
+    const ano0   = new Date(agora.getFullYear(), 0, 1);
+
+    let total=0, nHoje=0, nSem=0, nMes=0, nAno=0;
+    let aHoje=0, aSem=0, aMes=0, aAno=0, inat=0;
+
+    allUsers.forEach(u => {
+      total++;
+      const c = u.created_at      ? new Date(u.created_at)      : null;
+      const a = u.last_sign_in_at ? new Date(u.last_sign_in_at) : null;
+
+      if (c) {
+        if (c >= hoje0) nHoje++;
+        if (c >= sem0)  nSem++;
+        if (c >= mes0)  nMes++;
+        if (c >= ano0)  nAno++;
+      }
+      if (a) {
+        if (a >= hoje0) aHoje++;
+        if (a >= sem0)  aSem++;
+        if (a >= mes0)  aMes++;
+        if (a >= ano0)  aAno++;
+        if (a < mes0)   inat++;
+      } else {
+        inat++;
+      }
+    });
+
+    setText('s-total',  total);
+    setText('s-nhoje',  nHoje);
+    setText('s-nsem',   nSem);
+    setText('s-nmes',   nMes);
+    setText('s-nano',   nAno);
+    setText('s-ahoje',  aHoje);
+    setText('s-asem',   aSem);
+    setText('s-ames',   aMes);
+    setText('s-aano',   aAno);
+    setText('s-inat',   inat);
+
+    renderChart();
+  }
+
+  /* ── Bar chart ──────────────────────────── */
+  function renderChart() {
+    const canvas = document.getElementById('adm-chart');
+    const ctx    = canvas.getContext('2d');
+    const W      = canvas.parentElement.clientWidth - 36;
+    const H      = 130;
+    canvas.width  = W;
+    canvas.height = H;
+
+    const dias   = 30;
+    const counts = Array(dias).fill(0);
+    const agora  = new Date();
+
+    allUsers.forEach(u => {
+      if (!u.created_at) return;
+      const diff = Math.floor((agora - new Date(u.created_at)) / 86400000);
+      if (diff >= 0 && diff < dias) counts[dias - 1 - diff]++;
+    });
+
+    const max  = Math.max(...counts, 1);
+    const barW = Math.floor((W - 16) / dias);
+    const pad  = 3;
+
+    ctx.clearRect(0, 0, W, H);
+
+    counts.forEach((v, i) => {
+      const bH = v > 0 ? Math.max(v / max * (H - 24), 4) : 2;
+      const x  = 8 + i * barW + pad / 2;
+      const y  = H - 12 - bH;
+
+      if (v > 0) {
+        const g = ctx.createLinearGradient(0, y, 0, H - 12);
+        g.addColorStop(0, '#7C6FF7');
+        g.addColorStop(1, '#2EC4B6');
+        ctx.fillStyle = g;
+      } else {
+        ctx.fillStyle = 'rgba(255,255,255,.05)';
+      }
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(x, y, barW - pad, bH, [3, 3, 0, 0]);
+      } else {
+        ctx.rect(x, y, barW - pad, bH);
+      }
+      ctx.fill();
+    });
+
+    document.getElementById('chart-leg').textContent =
+      `Cada barra = 1 dia · máximo do período: ${max}`;
+  }
+
+  /* ── Helpers ────────────────────────────── */
+  function setText(id, v) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = v;
+  }
+
+  function timeSince(date) {
+    const s = Math.floor((Date.now() - date) / 1000);
+    if (s < 60)     return 'agora mesmo';
+    if (s < 3600)   return `há ${Math.floor(s/60)}min`;
+    if (s < 86400)  return `há ${Math.floor(s/3600)}h`;
+    if (s < 604800) return `há ${Math.floor(s/86400)}d`;
+    return date.toLocaleDateString('pt-BR');
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
