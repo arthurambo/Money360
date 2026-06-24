@@ -142,11 +142,13 @@ html.claro input[type="date"]::-webkit-calendar-picker-indicator{filter:none;}
 
 /* TIPO TOGGLE */
 .tipo-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.tipo-toggle--3{grid-template-columns:1fr 1fr 1fr;}
 .tipo-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 8px;border-radius:var(--r-md);border:1.5px solid var(--border-default);background:var(--surface-overlay);color:var(--text-secondary);font-size:.85rem;font-weight:600;transition:all var(--t-fast);}
 .tipo-btn svg{width:15px;height:15px;}
 .tipo-btn:hover{border-color:var(--border-strong);color:var(--text-primary);}
 .tipo-btn--receita.ativo{background:var(--color-success-bg);border-color:var(--color-success-border);color:var(--color-success);box-shadow:0 0 0 1px var(--color-success-border);}
 .tipo-btn--despesa.ativo{background:var(--color-danger-bg);border-color:var(--color-danger-border);color:var(--color-danger);box-shadow:0 0 0 1px var(--color-danger-border);}
+.tipo-btn--assinatura.ativo{background:var(--color-info-bg);border-color:var(--color-info-border);color:var(--color-info);box-shadow:0 0 0 1px var(--color-info-border);}
 
 /* BOTÕES */
 .btn-primario{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;margin-top:6px;background:var(--brand-grad);color:white;border:none;border-radius:var(--r-md);font-size:.9rem;font-weight:700;letter-spacing:.01em;box-shadow:var(--shadow-glow-violet);transition:opacity var(--t-fast),transform var(--t-fast);}
@@ -418,6 +420,10 @@ html.claro .auth-screen::before,html.claro .auth-screen::after{opacity:.18;}
   .btn-fechar-mobile{display:flex !important;}
 }
 @media(max-width:640px){
+  /* Toggle de 3 colunas (categorias) com texto mais compacto */
+  .tipo-toggle--3{gap:6px;}
+  .tipo-toggle--3 .tipo-btn{padding:9px 4px;font-size:.74rem;gap:4px;}
+
   /* Cards de resumo compactos para caber 3 por linha */
   .resumo .card-body{flex-direction:column;align-items:flex-start;gap:8px;padding:12px 10px 8px;}
   .resumo .card-footer-bar{height:2px;}

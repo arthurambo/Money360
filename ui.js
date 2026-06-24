@@ -192,25 +192,27 @@ document.addEventListener('DOMContentLoaded', () => {
      ASSINATURAS
   ══════════════════════════════════════════ */
   const STORAGE_ASS = 'carteira_assinaturas';
-  const CAT_ASS = {
-    streaming:       {e:'🎬', n:'Streaming'},
-    musica:          {e:'🎵', n:'Música'},
-    software:        {e:'💾', n:'Software / App'},
-    cloud:           {e:'☁️', n:'Nuvem'},
-    'servico-digital':{e:'🌐', n:'Serviço Digital'},
-    funcionario:     {e:'👤', n:'Funcionário'},
-    internet:        {e:'📡', n:'Internet / Tel.'},
-    seguro:          {e:'🛡️', n:'Seguro'},
-    academia:        {e:'🏋️', n:'Academia'},
-    educacao:        {e:'📚', n:'Educação'},
-    outros:          {e:'📦', n:'Outros'},
-  };
+  // Cores fixas para as categorias padrão (mantém o visual já conhecido).
+  // Categorias novas/customizadas recebem uma cor automática (hash do id).
   const COR_CAT_ASS = {
     streaming:'#7C6FF7', musica:'#2EC4B6', software:'#5B9CF6',
     cloud:'#30D988', 'servico-digital':'#FFC542', funcionario:'#FF5C7A',
     internet:'#fb923c', seguro:'#f472b6', academia:'#34d399',
-    educacao:'#94a3b8', outros:'#6b7280',
+    educacao_assinatura:'#94a3b8', outros_assinatura:'#6b7280',
   };
+  const PALETA_COR_ASS = ['#7C6FF7','#2EC4B6','#5B9CF6','#30D988','#FFC542','#FF5C7A','#fb923c','#f472b6','#34d399','#94a3b8','#a78bfa','#22d3ee'];
+
+  function catAssInfo(id) {
+    const cm = window._catsMgr?.getCatMap() || {};
+    return cm[id] || cm['outros_assinatura'] || { emoji: '📦', nome: 'Outros' };
+  }
+
+  function corCatAss(id) {
+    if (COR_CAT_ASS[id]) return COR_CAT_ASS[id];
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+    return PALETA_COR_ASS[hash % PALETA_COR_ASS.length];
+  }
 
   function getAssinaturas() { try { return JSON.parse(localStorage.getItem(STORAGE_ASS))||[]; } catch{return[];} }
   function saveAssinaturas(a) { try { localStorage.setItem(STORAGE_ASS,JSON.stringify(a)); } catch{} }
@@ -242,22 +244,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const sorted = [...lista].sort((a,b)=>a.categoria.localeCompare(b.categoria)||a.nome.localeCompare(b.nome));
 
     sorted.forEach(s => {
-      const info = CAT_ASS[s.categoria]||CAT_ASS.outros;
-      const cor  = COR_CAT_ASS[s.categoria]||'#6b7280';
+      const info = catAssInfo(s.categoria);
+      const cor  = corCatAss(s.categoria);
       const card = document.createElement('div');
       card.className = 'ass-card';
       card.innerHTML = `
         <div class="ass-card-accent" style="background:${cor}"></div>
         <div class="ass-card-body">
           <div class="ass-card-top">
-            <div class="ass-card-icon" style="background:${cor}22;color:${cor}">${info.e}</div>
+            <div class="ass-card-icon" style="background:${cor}22;color:${cor}">${info.emoji}</div>
             <div class="ass-card-acoes">
               <button class="btn-editar ass-btn-edit" title="Editar"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg></button>
               <button class="btn-excluir ass-btn-del" title="Remover">×</button>
             </div>
           </div>
           <h4 class="ass-card-nome">${esc(s.nome)}</h4>
-          <span class="ass-card-cat">${info.n}</span>
+          <span class="ass-card-cat">${info.nome}</span>
           <div class="ass-card-valores">
             <div><p class="ass-val-label">Por mês</p><p class="ass-val-num">${moeda(s.valor)}</p></div>
             <div><p class="ass-val-label">Por ano</p><p class="ass-val-num">${moeda(s.valor*12)}</p></div>
@@ -287,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (q('ass-nome'))      q('ass-nome').value       = ass.nome;
       if (q('ass-valor'))     q('ass-valor').value      = ass.valor;
       if (q('ass-vencimento'))q('ass-vencimento').value = ass.vencimento||'';
-      if (q('ass-categoria')) q('ass-categoria').value  = ass.categoria;
+      window._catsMgr?.populateSelectByTipo('ass-categoria', 'assinatura', ass.categoria);
       if (q('ass-notas'))     q('ass-notas').value      = ass.notas||'';
     } else {
       if (titulo) titulo.textContent = 'Nova Assinatura';
@@ -295,7 +297,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (q('ass-nome'))      q('ass-nome').value       = '';
       if (q('ass-valor'))     q('ass-valor').value      = '';
       if (q('ass-vencimento'))q('ass-vencimento').value = '';
-      if (q('ass-categoria')) q('ass-categoria').value  = 'streaming';
+      const primeiraAss = window._catsMgr?.getCatsByTipo('assinatura')[0]?.id;
+      window._catsMgr?.populateSelectByTipo('ass-categoria', 'assinatura', primeiraAss);
       if (q('ass-notas'))     q('ass-notas').value      = '';
     }
     abrirModal(modalAss);
@@ -307,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const nome = q('ass-nome')?.value.trim()|| '';
     const vStr = q('ass-valor')?.value      || '';
     const venc = q('ass-vencimento')?.value || '';
-    const cat  = q('ass-categoria')?.value  || 'outros';
+    const cat  = q('ass-categoria')?.value  || 'outros_assinatura';
     const nota = q('ass-notas')?.value.trim()|| '';
     const errEl= q('ass-msg-erro');
 
