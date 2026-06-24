@@ -9,16 +9,33 @@
   const STORAGE_KEY = 'carteira_categorias';
 
   const DEFAULT_CATS = [
-    { id: 'salario',      emoji: '💰', nome: 'Salário',      tipo: 'receita', isDefault: true },
-    { id: 'freelance',    emoji: '💻', nome: 'Freelance',    tipo: 'receita', isDefault: true },
-    { id: 'investimento', emoji: '📈', nome: 'Investimento', tipo: 'receita', isDefault: true },
-    { id: 'alimentacao',  emoji: '🍔', nome: 'Alimentação',  tipo: 'despesa', isDefault: true },
-    { id: 'transporte',   emoji: '🚗', nome: 'Transporte',   tipo: 'despesa', isDefault: true },
-    { id: 'moradia',      emoji: '🏠', nome: 'Moradia',      tipo: 'despesa', isDefault: true },
-    { id: 'saude',        emoji: '💊', nome: 'Saúde',        tipo: 'despesa', isDefault: true },
-    { id: 'lazer',        emoji: '🎮', nome: 'Lazer',        tipo: 'despesa', isDefault: true },
-    { id: 'educacao',     emoji: '📚', nome: 'Educação',     tipo: 'despesa', isDefault: true },
-    { id: 'outros',       emoji: '📦', nome: 'Outros',       tipo: 'despesa', isDefault: true },
+    // Receita
+    { id: 'salario',              emoji: '💰', nome: 'Salário',      tipo: 'receita', isDefault: true },
+    { id: 'freelance',            emoji: '💻', nome: 'Freelance',    tipo: 'receita', isDefault: true },
+    { id: 'investimento',         emoji: '📈', nome: 'Investimento', tipo: 'receita', isDefault: true },
+    { id: 'outros_receita',       emoji: '📦', nome: 'Outros',       tipo: 'receita', isDefault: true },
+    // Despesa
+    { id: 'investimento_despesa', emoji: '📈', nome: 'Investimento', tipo: 'despesa', isDefault: true },
+    { id: 'alimentacao',          emoji: '🍔', nome: 'Alimentação',  tipo: 'despesa', isDefault: true },
+    { id: 'saude',                emoji: '💊', nome: 'Saúde',        tipo: 'despesa', isDefault: true },
+    { id: 'transporte',           emoji: '🚗', nome: 'Transporte',   tipo: 'despesa', isDefault: true },
+    { id: 'moradia',              emoji: '🏠', nome: 'Moradia',      tipo: 'despesa', isDefault: true },
+    { id: 'lazer',                emoji: '🎮', nome: 'Lazer',        tipo: 'despesa', isDefault: true },
+    { id: 'educacao',             emoji: '📚', nome: 'Educação',     tipo: 'despesa', isDefault: true },
+    { id: 'outros',               emoji: '📦', nome: 'Outros',       tipo: 'despesa', isDefault: true },
+  ];
+
+  // Tipo correto de cada id padrão antigo (salvo antes de existir o campo "tipo")
+  const TIPO_MIGRACAO = {
+    salario: 'receita', freelance: 'receita', investimento: 'receita',
+    alimentacao: 'despesa', transporte: 'despesa', moradia: 'despesa',
+    saude: 'despesa', lazer: 'despesa', educacao: 'despesa', outros: 'despesa',
+  };
+
+  // Categorias padrão que existem nos dois tipos: cria a versão que falta
+  const DUPLICAR_MIGRACAO = [
+    { origemId: 'investimento', novoId: 'investimento_despesa', tipo: 'despesa' },
+    { origemId: 'outros',       novoId: 'outros_receita',        tipo: 'receita' },
   ];
 
   let cats = [];
@@ -26,15 +43,33 @@
   // para que populateCatSelects() (chamado após CRUD) preserve o filtro.
   const lastTipo = { 'input-categoria': 'receita', 'edit-categoria': 'receita' };
 
+  function migrarCats(parsed) {
+    let mudou = false;
+    const result = parsed.map(c => {
+      if (c.tipo === 'receita' || c.tipo === 'despesa') return c;
+      mudou = true;
+      return { ...c, tipo: TIPO_MIGRACAO[c.id] || 'despesa' };
+    });
+
+    if (mudou) {
+      DUPLICAR_MIGRACAO.forEach(({ origemId, novoId, tipo }) => {
+        const origem    = result.find(c => c.id === origemId);
+        const jaExiste = result.some(c => c.id === novoId);
+        if (origem && !jaExiste) {
+          result.push({ id: novoId, emoji: origem.emoji, nome: origem.nome, tipo, isDefault: true });
+        }
+      });
+    }
+
+    return result;
+  }
+
   function loadCats() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length) {
-          // Migra categorias antigas sem campo "tipo"
-          return parsed.map(c => ({ tipo: 'despesa', ...c }));
-        }
+        if (Array.isArray(parsed) && parsed.length) return migrarCats(parsed);
       }
     } catch {}
     return DEFAULT_CATS.map(c => ({ ...c }));
@@ -257,6 +292,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     cats = loadCats();
+    saveCats(); // persiste imediatamente o resultado de uma eventual migração
     populateCatSelects();
     renderCatPanel();
     setupCatPanel();
