@@ -120,7 +120,7 @@ function registrarEventos() {
 
   btnLimparTudo?.addEventListener('click', () => {
     if (!transacoes.length) return;
-    abrirModalEx('Deseja apagar TODAS as transações, assinaturas e categorias criadas? Esta ação não pode ser desfeita.', null);
+    abrirModalEx('Deseja apagar TODAS as transações, assinaturas, fontes de renda e categorias criadas? Esta ação não pode ser desfeita.', null);
   });
 
   // Modal exclusão
@@ -222,9 +222,11 @@ function limparTudo() {
   transacoes = []; transacoesFiltradas = []; filtroAtivo = false;
   salvar(STORAGE_KEY, transacoes);
   salvar('carteira_assinaturas', []);
+  salvar('carteira_rendas', []);
   window._catsMgr?.resetCats();
   renderTudo();
   window._renderAssinaturas?.();
+  window._renderRenda?.();
   toast('🗑️ Tudo removido.');
 }
 

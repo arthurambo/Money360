@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (nome === 'relatorios')  renderRelatorios();
     if (nome === 'transacoes')  renderTabelaTransacoes();
     if (nome === 'assinaturas') renderAssinaturas();
+    if (nome === 'renda')       renderRenda();
     if (nome === 'configuracoes') syncTemaConfig();
   }
 
@@ -349,6 +350,155 @@ document.addEventListener('DOMContentLoaded', () => {
   modalAss?.addEventListener('click', e => { if(e.target===modalAss) fecharModal(modalAss); });
 
   /* ══════════════════════════════════════════
+     RENDA (fontes de renda)
+  ══════════════════════════════════════════ */
+  const STORAGE_RENDA = 'carteira_rendas';
+  const COR_CAT_RENDA = { salario:'#30D988', freelance:'#5B9CF6', investimento:'#7C6FF7', outros_receita:'#94a3b8' };
+  const PALETA_COR_RENDA = ['#30D988','#5B9CF6','#7C6FF7','#2EC4B6','#FFC542','#34d399','#a78bfa','#22d3ee','#fb923c','#f472b6'];
+
+  function catRendaInfo(id) {
+    const cm = window._catsMgr?.getCatMap() || {};
+    return cm[id] || cm['outros_receita'] || { emoji: '💰', nome: 'Outros' };
+  }
+
+  function corCatRenda(id) {
+    if (COR_CAT_RENDA[id]) return COR_CAT_RENDA[id];
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+    return PALETA_COR_RENDA[hash % PALETA_COR_RENDA.length];
+  }
+
+  function getRendas() { try { return JSON.parse(localStorage.getItem(STORAGE_RENDA))||[]; } catch{return[];} }
+  function saveRendas(a) { try { localStorage.setItem(STORAGE_RENDA,JSON.stringify(a)); } catch{} }
+
+  function renderRenda() {
+    const lista  = getRendas();
+    const grid   = q('renda-grid');
+    const vazio  = q('renda-vazio');
+    const badge  = q('nav-badge-renda');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const totalMensal = lista.reduce((a,s)=>a+s.valor,0);
+    const el1 = q('renda-total-mensal'); if (el1) el1.textContent = moeda(totalMensal);
+    const el2 = q('renda-total-anual');  if (el2) el2.textContent = moeda(totalMensal*12);
+    const el3 = q('renda-total-qtd');    if (el3) el3.textContent = lista.length;
+
+    if (badge) { badge.textContent = lista.length||''; badge.style.display = lista.length ? '' : 'none'; }
+
+    if (!lista.length) {
+      if (vazio) vazio.style.display = 'flex';
+      return;
+    }
+    if (vazio) vazio.style.display = 'none';
+
+    const sorted = [...lista].sort((a,b)=>a.categoria.localeCompare(b.categoria)||a.nome.localeCompare(b.nome));
+
+    sorted.forEach(s => {
+      const info = catRendaInfo(s.categoria);
+      const cor  = corCatRenda(s.categoria);
+      const card = document.createElement('div');
+      card.className = 'ass-card';
+      card.innerHTML = `
+        <div class="ass-card-accent" style="background:${cor}"></div>
+        <div class="ass-card-body">
+          <div class="ass-card-top">
+            <div class="ass-card-icon" style="background:${cor}22;color:${cor}">${info.emoji}</div>
+            <div class="ass-card-acoes">
+              <button class="btn-editar renda-btn-edit" title="Editar"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg></button>
+              <button class="btn-excluir renda-btn-del" title="Remover">×</button>
+            </div>
+          </div>
+          <h4 class="ass-card-nome">${esc(s.nome)}</h4>
+          <span class="ass-card-cat">${info.nome}</span>
+          <div class="ass-card-valores">
+            <div><p class="ass-val-label">Por mês</p><p class="ass-val-num">${moeda(s.valor)}</p></div>
+            <div><p class="ass-val-label">Por ano</p><p class="ass-val-num">${moeda(s.valor*12)}</p></div>
+            ${s.diaRecebimento ? `<div><p class="ass-val-label">Recebe dia</p><p class="ass-val-num">${s.diaRecebimento}</p></div>` : ''}
+          </div>
+          ${s.notas ? `<p class="ass-card-notas">${esc(s.notas)}</p>` : ''}
+        </div>`;
+      card.querySelector('.renda-btn-edit').addEventListener('click', () => abrirModalRenda(s.id));
+      card.querySelector('.renda-btn-del') .addEventListener('click', () => removerRenda(s.id));
+      grid.appendChild(card);
+    });
+  }
+
+  const modalRenda = q('modal-renda');
+
+  function abrirModalRenda(id) {
+    const titulo = q('renda-modal-titulo');
+    const errEl  = q('renda-msg-erro');
+    if (errEl) errEl.style.display = 'none';
+
+    if (id) {
+      const r = getRendas().find(a=>a.id===id);
+      if (!r) return;
+      if (titulo)              titulo.textContent = 'Editar Fonte de Renda';
+      if (q('renda-edit-id'))  q('renda-edit-id').value = r.id;
+      if (q('renda-nome'))     q('renda-nome').value     = r.nome;
+      if (q('renda-valor'))    q('renda-valor').value    = r.valor;
+      if (q('renda-dia'))      q('renda-dia').value      = r.diaRecebimento||'';
+      window._catsMgr?.populateSelectByTipo('renda-categoria', 'receita', r.categoria);
+      if (q('renda-notas'))    q('renda-notas').value    = r.notas||'';
+    } else {
+      if (titulo) titulo.textContent = 'Nova Fonte de Renda';
+      if (q('renda-edit-id'))  q('renda-edit-id').value = '';
+      if (q('renda-nome'))     q('renda-nome').value     = '';
+      if (q('renda-valor'))    q('renda-valor').value    = '';
+      if (q('renda-dia'))      q('renda-dia').value      = '';
+      const primeiraRenda = window._catsMgr?.getCatsByTipo('receita')[0]?.id;
+      window._catsMgr?.populateSelectByTipo('renda-categoria', 'receita', primeiraRenda);
+      if (q('renda-notas'))    q('renda-notas').value    = '';
+    }
+    abrirModal(modalRenda);
+    q('renda-nome')?.focus();
+  }
+
+  function salvarRenda() {
+    const id   = q('renda-edit-id')?.value    || '';
+    const nome = q('renda-nome')?.value.trim()|| '';
+    const vStr = q('renda-valor')?.value      || '';
+    const dia  = q('renda-dia')?.value        || '';
+    const cat  = q('renda-categoria')?.value  || 'outros_receita';
+    const nota = q('renda-notas')?.value.trim()|| '';
+    const errEl= q('renda-msg-erro');
+
+    function errRenda(msg) { if(errEl){errEl.textContent=msg;errEl.style.display='flex';} }
+
+    if (!nome) return errRenda('Informe o nome da fonte.');
+    const v = parseFloat(vStr);
+    if (!vStr||isNaN(v)||v<=0) return errRenda('Informe um valor mensal válido.');
+
+    let lista = getRendas();
+    if (id) {
+      const idx = lista.findIndex(a=>a.id===id);
+      if (idx !== -1) lista[idx] = {...lista[idx], nome, valor:v, diaRecebimento:dia?+dia:'', categoria:cat, notas:nota};
+    } else {
+      lista.push({ id: (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2,5)), nome, valor:v, diaRecebimento:dia?+dia:'', categoria:cat, notas:nota });
+    }
+    saveRendas(lista);
+    fecharModal(modalRenda);
+    renderRenda();
+    mostrarToast(id ? '✏️ Fonte de renda atualizada!' : '✅ Fonte de renda adicionada!');
+  }
+
+  function removerRenda(id) {
+    const lista = getRendas().filter(a=>a.id!==id);
+    saveRendas(lista);
+    renderRenda();
+    mostrarToast('🗑️ Fonte de renda removida.');
+  }
+
+  window._renderRenda = renderRenda;
+
+  q('btn-nova-renda')      ?.addEventListener('click', () => abrirModalRenda(null));
+  q('renda-modal-salvar')  ?.addEventListener('click', salvarRenda);
+  q('renda-modal-cancelar')?.addEventListener('click', () => fecharModal(modalRenda));
+  q('renda-modal-fechar')  ?.addEventListener('click', () => fecharModal(modalRenda));
+  modalRenda?.addEventListener('click', e => { if(e.target===modalRenda) fecharModal(modalRenda); });
+
+  /* ══════════════════════════════════════════
      RELATÓRIOS
   ══════════════════════════════════════════ */
   const CORES_REL = ['#7C6FF7','#2EC4B6','#FF5C7A','#FFC542','#5B9CF6','#30D988','#fb923c','#f472b6','#34d399','#94a3b8'];
@@ -519,6 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
       exportadoEm: new Date().toISOString(),
       transacoes: getTransacoes(),
       assinaturas: getAssinaturas(),
+      rendas: getRendas(),
       categorias,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
@@ -540,6 +691,9 @@ document.addEventListener('DOMContentLoaded', () => {
           localStorage.setItem('carteira_transacoes', JSON.stringify(d.transacoes));
           if (Array.isArray(d.assinaturas)) {
             localStorage.setItem('carteira_assinaturas', JSON.stringify(d.assinaturas));
+          }
+          if (Array.isArray(d.rendas)) {
+            localStorage.setItem('carteira_rendas', JSON.stringify(d.rendas));
           }
           if (Array.isArray(d.categorias) && d.categorias.length) {
             localStorage.setItem('carteira_categorias', JSON.stringify(d.categorias));
@@ -573,10 +727,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (q('view-transacoes')?.classList.contains('view--active'))  renderTabelaTransacoes();
       if (q('view-relatorios')?.classList.contains('view--active'))  renderRelatorios();
       if (q('view-assinaturas')?.classList.contains('view--active')) renderAssinaturas();
+      if (q('view-renda')?.classList.contains('view--active'))       renderRenda();
     }
   }, 600);
 
-  /* ── Renderiza badge de assinaturas ao carregar ── */
+  /* ── Renderiza badges ao carregar ── */
   renderAssinaturas();
+  renderRenda();
 
 });
