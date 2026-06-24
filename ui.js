@@ -509,11 +509,14 @@ document.addEventListener('DOMContentLoaded', () => {
      CONFIGURAÇÕES
   ══════════════════════════════════════════ */
   q('btn-exportar')?.addEventListener('click', () => {
+    let categorias = [];
+    try { categorias = JSON.parse(localStorage.getItem('carteira_categorias') || '[]'); } catch {}
     const payload = {
       versao: '1.0',
       exportadoEm: new Date().toISOString(),
       transacoes: getTransacoes(),
       assinaturas: getAssinaturas(),
+      categorias,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {type: 'application/json'});
     const a = document.createElement('a');
@@ -534,6 +537,9 @@ document.addEventListener('DOMContentLoaded', () => {
           localStorage.setItem('carteira_transacoes', JSON.stringify(d.transacoes));
           if (Array.isArray(d.assinaturas)) {
             localStorage.setItem('carteira_assinaturas', JSON.stringify(d.assinaturas));
+          }
+          if (Array.isArray(d.categorias) && d.categorias.length) {
+            localStorage.setItem('carteira_categorias', JSON.stringify(d.categorias));
           }
           const nAss = (d.assinaturas||[]).length;
           mostrarToast(`✅ ${d.transacoes.length} transações e ${nAss} assinatura(s) importadas! Recarregando…`);
