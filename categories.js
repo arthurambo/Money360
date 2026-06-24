@@ -38,38 +38,44 @@
     { origemId: 'outros',       novoId: 'outros_receita',        tipo: 'receita' },
   ];
 
+  // Versão da lógica de migração. Subir este número força uma nova correção
+  // mesmo em categorias que já têm "tipo" salvo (ex.: corrigir um bug antigo).
+  const MIGRACAO_VERSAO_KEY = 'carteira_categorias_versao';
+  const MIGRACAO_ATUAL      = 2;
+
   let cats = [];
   // Lembra qual tipo está sendo filtrado em cada select de transação,
   // para que populateCatSelects() (chamado após CRUD) preserve o filtro.
   const lastTipo = { 'input-categoria': 'receita', 'edit-categoria': 'receita' };
 
-  function migrarCats(parsed) {
-    let mudou = false;
+  function migrarCats(parsed, forcarCorrecao) {
     const result = parsed.map(c => {
+      // ids padrão conhecidos: sempre força o tipo correto (corrige dados salvos errados)
+      if (forcarCorrecao && TIPO_MIGRACAO[c.id]) return { ...c, tipo: TIPO_MIGRACAO[c.id] };
       if (c.tipo === 'receita' || c.tipo === 'despesa') return c;
-      mudou = true;
       return { ...c, tipo: TIPO_MIGRACAO[c.id] || 'despesa' };
     });
 
-    if (mudou) {
-      DUPLICAR_MIGRACAO.forEach(({ origemId, novoId, tipo }) => {
-        const origem    = result.find(c => c.id === origemId);
-        const jaExiste = result.some(c => c.id === novoId);
-        if (origem && !jaExiste) {
-          result.push({ id: novoId, emoji: origem.emoji, nome: origem.nome, tipo, isDefault: true });
-        }
-      });
-    }
+    DUPLICAR_MIGRACAO.forEach(({ origemId, novoId, tipo }) => {
+      const origem   = result.find(c => c.id === origemId);
+      const jaExiste = result.some(c => c.id === novoId);
+      if (origem && !jaExiste) {
+        result.push({ id: novoId, emoji: origem.emoji, nome: origem.nome, tipo, isDefault: true });
+      }
+    });
 
     return result;
   }
 
   function loadCats() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw    = localStorage.getItem(STORAGE_KEY);
+      const versao = parseInt(localStorage.getItem(MIGRACAO_VERSAO_KEY) || '0', 10);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length) return migrarCats(parsed);
+        if (Array.isArray(parsed) && parsed.length) {
+          return migrarCats(parsed, versao < MIGRACAO_ATUAL);
+        }
       }
     } catch {}
     return DEFAULT_CATS.map(c => ({ ...c }));
@@ -293,6 +299,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     cats = loadCats();
     saveCats(); // persiste imediatamente o resultado de uma eventual migração
+    localStorage.setItem(MIGRACAO_VERSAO_KEY, String(MIGRACAO_ATUAL));
     populateCatSelects();
     renderCatPanel();
     setupCatPanel();
