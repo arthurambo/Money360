@@ -114,10 +114,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const ADMIN_EMAILS = ['ambrosio.arthur@gmail.com'];
+
   function aplicarSessao(session) {
     const email = session?.user?.email || '';
     const el = q('config-user-email');
     if (el) el.textContent = email || '—';
+    const btnAdmin = q('btn-admin');
+    if (btnAdmin) btnAdmin.style.display = ADMIN_EMAILS.includes(email) ? '' : 'none';
     window._sync?.carregarDoSupabase(session);
   }
 
@@ -256,6 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
   q('google-btn')?.addEventListener('click', handleGoogleLogin);
   q('google-btn-register')?.addEventListener('click', handleGoogleLogin);
   q('btn-sair')?.addEventListener('click', handleLogout);
+  q('btn-admin')?.addEventListener('click', () => { window.location.href = './admin.html'; });
 
   ['login-email', 'login-password'].forEach(id => {
     q(id)?.addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });

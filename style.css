@@ -54,7 +54,12 @@ svg{display:block;} button{font-family:var(--font);cursor:pointer;} a{text-decor
 .nav-item--active svg{opacity:1;}
 .nav-item--active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;border-radius:0 3px 3px 0;background:var(--brand-grad);}
 .nav-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;background:var(--brand-violet);color:#fff;font-size:.65rem;font-weight:700;border-radius:var(--r-full);margin-left:auto;}
-.sidebar-bottom{padding:16px 12px;border-top:1px solid var(--border-subtle);}
+.sidebar-bottom{padding:16px 12px;border-top:1px solid var(--border-subtle);display:flex;flex-direction:column;gap:8px;}
+.btn-admin{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:var(--r-md);
+  border:1px solid rgba(124,111,247,.3);background:var(--brand-grad-soft);color:var(--brand-violet);
+  font-size:.85rem;font-weight:600;transition:all var(--t-fast);cursor:pointer;}
+.btn-admin svg{width:18px;height:18px;flex-shrink:0;}
+.btn-admin:hover{background:var(--brand-grad);color:#fff;border-color:transparent;}
 .btn-tema{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:var(--r-md);border:1px solid var(--border-default);background:transparent;color:var(--text-secondary);font-size:.85rem;font-weight:500;transition:all var(--t-fast);}
 .btn-tema svg{width:18px;height:18px;flex-shrink:0;}
 .btn-tema .icon-lua{display:none;}
