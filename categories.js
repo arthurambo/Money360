@@ -172,6 +172,15 @@
     renderCatPanel();
   }
 
+  /* Restaura apenas as categorias padrão, removendo as criadas pelo usuário */
+  function resetCats() {
+    cats = DEFAULT_CATS.map(c => ({ ...c }));
+    saveCats();
+    localStorage.setItem(MIGRACAO_VERSAO_KEY, String(MIGRACAO_ATUAL));
+    populateCatSelects();
+    renderCatPanel();
+  }
+
   /* ── RENDER PANEL ─────────────────────── */
 
   function renderGrupoCat(listEl, lista) {
@@ -305,5 +314,5 @@
     setupCatPanel();
   });
 
-  window._catsMgr = { getCatMap, populateCatSelects, renderCatPanel, populateSelectByTipo, getCatsByTipo };
+  window._catsMgr = { getCatMap, populateCatSelects, renderCatPanel, populateSelectByTipo, getCatsByTipo, resetCats };
 })();
