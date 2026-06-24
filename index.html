@@ -340,8 +340,26 @@
       <!-- VIEW CATEGORIAS -->
       <div id="view-categorias" class="view">
         <div class="page-header"><div><h1 class="page-title">Categorias</h1><p class="page-sub">Gerencie as categorias das suas transações</p></div></div>
+
         <div class="painel">
-          <div id="cat-lista" class="cat-lista"></div>
+          <div class="painel-header"><h3 class="painel-titulo">💸 Categorias de Despesa</h3><span class="badge-count" id="cat-count-despesa">0</span></div>
+          <div id="cat-lista-despesa" class="cat-lista"></div>
+        </div>
+
+        <div class="painel">
+          <div class="painel-header"><h3 class="painel-titulo">💰 Categorias de Receita</h3><span class="badge-count" id="cat-count-receita">0</span></div>
+          <div id="cat-lista-receita" class="cat-lista"></div>
+        </div>
+
+        <div class="painel">
+          <div class="painel-header"><h3 class="painel-titulo">Nova Categoria</h3></div>
+          <div class="campo-grupo">
+            <label class="campo-label">Tipo</label>
+            <div class="tipo-toggle">
+              <button type="button" id="cat-tipo-despesa" class="tipo-btn tipo-btn--despesa ativo">💸 Despesa</button>
+              <button type="button" id="cat-tipo-receita" class="tipo-btn tipo-btn--receita">💰 Receita</button>
+            </div>
+          </div>
           <div class="cat-form">
             <input type="text" id="cat-add-emoji" class="campo-input cat-emoji-input" placeholder="📦" maxlength="4" />
             <input type="text" id="cat-add-nome" class="campo-input" placeholder="Nome da categoria…" maxlength="30" />

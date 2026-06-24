@@ -234,9 +234,8 @@ function abrirEdicao(id) {
   if (editDesc) editDesc.value = t.descricao;
   if (editVal)  editVal.value  = t.valor;
   if (editDt)   editDt.value   = t.data;
-  if (editCat)  editCat.value  = t.categoria;
   if (editErro) editErro.style.display = 'none';
-  selTipoEdit(t.tipo);
+  selTipoEdit(t.tipo, t.categoria);
   abrirM(modalEdicao);
   editDesc?.focus();
 }
@@ -264,10 +263,11 @@ function showEditErr(txt) {
   editErro.textContent = txt; editErro.style.display = 'flex';
 }
 
-function selTipoEdit(tipo) {
+function selTipoEdit(tipo, categoriaDesejada) {
   tipoEditando = tipo;
   editBtnRec?.classList.toggle('ativo', tipo === 'receita');
   editBtnDesp?.classList.toggle('ativo', tipo === 'despesa');
+  window._catsMgr?.populateSelectByTipo('edit-categoria', tipo, categoriaDesejada);
 }
 
 // ── MODAIS (style.display — não usa hidden nem classes) ──
@@ -388,6 +388,7 @@ function selTipo(tipo) {
   tipoSelecionado = tipo;
   btnReceita?.classList.toggle('ativo', tipo === 'receita');
   btnDespesa?.classList.toggle('ativo', tipo === 'despesa');
+  window._catsMgr?.populateSelectByTipo('input-categoria', tipo);
 }
 
 // ── TEMA ──────────────────────────────────────────

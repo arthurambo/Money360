@@ -9,26 +9,32 @@
   const STORAGE_KEY = 'carteira_categorias';
 
   const DEFAULT_CATS = [
-    { id: 'salario',      emoji: '💰', nome: 'Salário',      isDefault: true },
-    { id: 'freelance',    emoji: '💻', nome: 'Freelance',    isDefault: true },
-    { id: 'investimento', emoji: '📈', nome: 'Investimento', isDefault: true },
-    { id: 'alimentacao',  emoji: '🍔', nome: 'Alimentação',  isDefault: true },
-    { id: 'transporte',   emoji: '🚗', nome: 'Transporte',   isDefault: true },
-    { id: 'moradia',      emoji: '🏠', nome: 'Moradia',      isDefault: true },
-    { id: 'saude',        emoji: '💊', nome: 'Saúde',        isDefault: true },
-    { id: 'lazer',        emoji: '🎮', nome: 'Lazer',        isDefault: true },
-    { id: 'educacao',     emoji: '📚', nome: 'Educação',     isDefault: true },
-    { id: 'outros',       emoji: '📦', nome: 'Outros',       isDefault: true },
+    { id: 'salario',      emoji: '💰', nome: 'Salário',      tipo: 'receita', isDefault: true },
+    { id: 'freelance',    emoji: '💻', nome: 'Freelance',    tipo: 'receita', isDefault: true },
+    { id: 'investimento', emoji: '📈', nome: 'Investimento', tipo: 'receita', isDefault: true },
+    { id: 'alimentacao',  emoji: '🍔', nome: 'Alimentação',  tipo: 'despesa', isDefault: true },
+    { id: 'transporte',   emoji: '🚗', nome: 'Transporte',   tipo: 'despesa', isDefault: true },
+    { id: 'moradia',      emoji: '🏠', nome: 'Moradia',      tipo: 'despesa', isDefault: true },
+    { id: 'saude',        emoji: '💊', nome: 'Saúde',        tipo: 'despesa', isDefault: true },
+    { id: 'lazer',        emoji: '🎮', nome: 'Lazer',        tipo: 'despesa', isDefault: true },
+    { id: 'educacao',     emoji: '📚', nome: 'Educação',     tipo: 'despesa', isDefault: true },
+    { id: 'outros',       emoji: '📦', nome: 'Outros',       tipo: 'despesa', isDefault: true },
   ];
 
   let cats = [];
+  // Lembra qual tipo está sendo filtrado em cada select de transação,
+  // para que populateCatSelects() (chamado após CRUD) preserve o filtro.
+  const lastTipo = { 'input-categoria': 'receita', 'edit-categoria': 'receita' };
 
   function loadCats() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length) return parsed;
+        if (Array.isArray(parsed) && parsed.length) {
+          // Migra categorias antigas sem campo "tipo"
+          return parsed.map(c => ({ tipo: 'despesa', ...c }));
+        }
       }
     } catch {}
     return DEFAULT_CATS.map(c => ({ ...c }));
@@ -40,30 +46,47 @@
 
   function getCatMap() {
     const map = {};
-    cats.forEach(c => { map[c.id] = { emoji: c.emoji, nome: c.nome }; });
-    if (!map.outros) map.outros = { emoji: '📦', nome: 'Outros' };
+    cats.forEach(c => { map[c.id] = { emoji: c.emoji, nome: c.nome, tipo: c.tipo }; });
+    if (!map.outros) map.outros = { emoji: '📦', nome: 'Outros', tipo: 'despesa' };
     return map;
   }
 
-  const TX_SELECT_IDS   = ['input-categoria', 'edit-categoria'];
+  function getCatsByTipo(tipo) {
+    return cats.filter(c => c.tipo === tipo);
+  }
+
+  const TX_SELECT_IDS    = ['input-categoria', 'edit-categoria'];
   const FILTER_SELECT_ID = 'filtro2-categoria';
 
-  function populateCatSelects() {
-    TX_SELECT_IDS.forEach(id => {
-      const sel = document.getElementById(id);
-      if (!sel) return;
-      const prev = sel.value;
-      sel.innerHTML = '';
-      cats.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = c.emoji + ' ' + c.nome;
-        sel.appendChild(opt);
-      });
-      if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
-      else sel.value = cats[0]?.id || 'outros';
+  /* Preenche um <select> de transação filtrando por tipo (receita/despesa) */
+  function populateSelectByTipo(selectId, tipo, desiredValue) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    if (TX_SELECT_IDS.includes(selectId)) lastTipo[selectId] = tipo;
+
+    const prev = desiredValue !== undefined ? desiredValue : sel.value;
+    const filtrado = cats.filter(c => c.tipo === tipo);
+
+    sel.innerHTML = '';
+    filtrado.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.emoji + ' ' + c.nome;
+      sel.appendChild(opt);
     });
 
+    if (prev && filtrado.some(c => c.id === prev)) sel.value = prev;
+    else sel.value = filtrado[0]?.id || '';
+  }
+
+  function populateCatSelects() {
+    // Selects de transação: respeitam o último tipo filtrado, preservando a seleção atual
+    TX_SELECT_IDS.forEach(id => {
+      const sel = document.getElementById(id);
+      populateSelectByTipo(id, lastTipo[id] || 'receita', sel?.value);
+    });
+
+    // Filtro de relatório: mostra todas as categorias, de qualquer tipo
     const fsel = document.getElementById(FILTER_SELECT_ID);
     if (fsel) {
       const prev = fsel.value;
@@ -80,19 +103,20 @@
 
   /* ── CRUD ─────────────────────────────── */
 
-  function addCat(emoji, nome) {
+  function addCat(emoji, nome, tipo) {
     const id = 'cat_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-    cats.push({ id, emoji: emoji || '📦', nome, isDefault: false });
+    cats.push({ id, emoji: emoji || '📦', nome, tipo: tipo === 'receita' ? 'receita' : 'despesa', isDefault: false });
     saveCats();
     populateCatSelects();
     renderCatPanel();
   }
 
-  function editCat(id, emoji, nome) {
+  function editCat(id, emoji, nome, tipo) {
     const c = cats.find(c => c.id === id);
     if (!c) return;
     c.emoji = emoji || c.emoji;
     c.nome  = nome  || c.nome;
+    if (tipo === 'receita' || tipo === 'despesa') c.tipo = tipo;
     saveCats();
     populateCatSelects();
     renderCatPanel();
@@ -109,14 +133,13 @@
 
   /* ── RENDER PANEL ─────────────────────── */
 
-  function renderCatPanel() {
-    const list = document.getElementById('cat-lista');
-    if (!list) return;
-    if (!cats.length) {
-      list.innerHTML = '<p class="cat-vazio">Nenhuma categoria cadastrada.</p>';
+  function renderGrupoCat(listEl, lista) {
+    if (!listEl) return;
+    if (!lista.length) {
+      listEl.innerHTML = '<p class="cat-vazio">Nenhuma categoria cadastrada.</p>';
       return;
     }
-    list.innerHTML = cats.map(c => `
+    listEl.innerHTML = lista.map(c => `
       <div class="cat-item" data-id="${c.id}">
         <span class="cat-emoji-preview">${c.emoji}</span>
         <span class="cat-nome">${c.nome}</span>
@@ -132,17 +155,39 @@
       </div>
     `).join('');
 
-    list.querySelectorAll('.cat-btn-editar').forEach(btn =>
+    listEl.querySelectorAll('.cat-btn-editar').forEach(btn =>
       btn.addEventListener('click', () => iniciarEdicaoCat(btn.dataset.id))
     );
-    list.querySelectorAll('.cat-btn-remover').forEach(btn =>
+    listEl.querySelectorAll('.cat-btn-remover').forEach(btn =>
       btn.addEventListener('click', () => solicitarRemocaoCat(btn.dataset.id))
     );
+  }
+
+  function renderCatPanel() {
+    const listDespesa = document.getElementById('cat-lista-despesa');
+    const listReceita  = document.getElementById('cat-lista-receita');
+    const despesas = cats.filter(c => c.tipo === 'despesa');
+    const receitas  = cats.filter(c => c.tipo === 'receita');
+
+    renderGrupoCat(listDespesa, despesas);
+    renderGrupoCat(listReceita, receitas);
+
+    const cntD = document.getElementById('cat-count-despesa');
+    const cntR = document.getElementById('cat-count-receita');
+    if (cntD) cntD.textContent = despesas.length;
+    if (cntR) cntR.textContent = receitas.length;
   }
 
   /* ── FORM ─────────────────────────────── */
 
   let editandoCatId = null;
+  let tipoFormCat    = 'despesa';
+
+  function selTipoFormCat(tipo) {
+    tipoFormCat = tipo;
+    document.getElementById('cat-tipo-despesa')?.classList.toggle('ativo', tipo === 'despesa');
+    document.getElementById('cat-tipo-receita')?.classList.toggle('ativo', tipo === 'receita');
+  }
 
   function iniciarEdicaoCat(id) {
     const c = cats.find(c => c.id === id);
@@ -156,6 +201,7 @@
     if (nomeInp)   nomeInp.value  = c.nome;
     if (btnSalvar) btnSalvar.textContent = 'Salvar';
     if (btnCancel) btnCancel.style.display = '';
+    selTipoFormCat(c.tipo);
     nomeInp?.focus();
   }
 
@@ -169,6 +215,7 @@
     if (nomeInp)   nomeInp.value  = '';
     if (btnSalvar) btnSalvar.textContent = 'Adicionar';
     if (btnCancel) btnCancel.style.display = 'none';
+    selTipoFormCat('despesa');
   }
 
   function solicitarRemocaoCat(id) {
@@ -189,9 +236,9 @@
     const nome  = (nomeInp?.value  || '').trim();
     if (!nome) { nomeInp?.focus(); return; }
     if (editandoCatId) {
-      editCat(editandoCatId, emoji || '📦', nome);
+      editCat(editandoCatId, emoji || '📦', nome, tipoFormCat);
     } else {
-      addCat(emoji || '📦', nome);
+      addCat(emoji || '📦', nome, tipoFormCat);
     }
     cancelarEdicaoCat();
   }
@@ -204,6 +251,8 @@
     btnSalvar.addEventListener('click', salvarCat);
     btnCancel?.addEventListener('click', cancelarEdicaoCat);
     nomeInp?.addEventListener('keydown', e => { if (e.key === 'Enter') salvarCat(); });
+    document.getElementById('cat-tipo-despesa')?.addEventListener('click', () => selTipoFormCat('despesa'));
+    document.getElementById('cat-tipo-receita')?.addEventListener('click', () => selTipoFormCat('receita'));
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -213,5 +262,5 @@
     setupCatPanel();
   });
 
-  window._catsMgr = { getCatMap, populateCatSelects, renderCatPanel };
+  window._catsMgr = { getCatMap, populateCatSelects, renderCatPanel, populateSelectByTipo, getCatsByTipo };
 })();
