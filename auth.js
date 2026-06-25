@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     appScreen.style.display  = '';
     setTimeout(() => window._notif?.verificar(), 1500);
     setTimeout(() => window._verificarCobrancasAutomaticas?.(), 1500);
+    setTimeout(() => window._verificarRecebimentosAutomaticos?.(), 1500);
   }
 
   function mostrarAuth() {

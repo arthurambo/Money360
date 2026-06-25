@@ -483,6 +483,9 @@ document.addEventListener('DOMContentLoaded', () => {
             <div><p class="ass-val-label">Por ano</p><p class="ass-val-num">${moeda(s.valor*12)}</p></div>
             ${s.diaRecebimento ? `<div><p class="ass-val-label">Recebe dia</p><p class="ass-val-num">${s.diaRecebimento}</p></div>` : ''}
           </div>
+          ${s.recebimentoAutomatico ? `<div class="ass-card-selos">
+            <span class="ass-selo ass-selo--auto">⚡ Recebimento automático</span>
+          </div>` : ''}
           ${s.notas ? `<p class="ass-card-notas">${esc(s.notas)}</p>` : ''}
         </div>`;
       card.querySelector('.renda-btn-edit').addEventListener('click', () => abrirModalRenda(s.id));
@@ -507,6 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (q('renda-valor'))    q('renda-valor').value    = r.valor;
       if (q('renda-dia'))      q('renda-dia').value      = r.diaRecebimento||'';
       window._catsMgr?.populateSelectByTipo('renda-categoria', 'receita', r.categoria);
+      if (q('renda-recebimento-automatico')) q('renda-recebimento-automatico').checked = !!r.recebimentoAutomatico;
       if (q('renda-notas'))    q('renda-notas').value    = r.notas||'';
     } else {
       if (titulo) titulo.textContent = 'Nova Fonte de Renda';
@@ -516,6 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (q('renda-dia'))      q('renda-dia').value      = '';
       const primeiraRenda = window._catsMgr?.getCatsByTipo('receita')[0]?.id;
       window._catsMgr?.populateSelectByTipo('renda-categoria', 'receita', primeiraRenda);
+      if (q('renda-recebimento-automatico')) q('renda-recebimento-automatico').checked = false;
       if (q('renda-notas'))    q('renda-notas').value    = '';
     }
     abrirModal(modalRenda);
@@ -529,6 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dia  = q('renda-dia')?.value        || '';
     const cat  = q('renda-categoria')?.value  || 'outros_receita';
     const nota = q('renda-notas')?.value.trim()|| '';
+    const recebimentoAutomatico = !!q('renda-recebimento-automatico')?.checked;
     const errEl= q('renda-msg-erro');
 
     function errRenda(msg) { if(errEl){errEl.textContent=msg;errEl.style.display='flex';} }
@@ -540,9 +546,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let lista = getRendas();
     if (id) {
       const idx = lista.findIndex(a=>a.id===id);
-      if (idx !== -1) lista[idx] = {...lista[idx], nome, valor:v, diaRecebimento:dia?+dia:'', categoria:cat, notas:nota};
+      if (idx !== -1) lista[idx] = {...lista[idx], nome, valor:v, diaRecebimento:dia?+dia:'', categoria:cat, notas:nota, recebimentoAutomatico};
     } else {
-      lista.push({ id: (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2,5)), nome, valor:v, diaRecebimento:dia?+dia:'', categoria:cat, notas:nota });
+      lista.push({ id: (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2,5)), nome, valor:v, diaRecebimento:dia?+dia:'', categoria:cat, notas:nota, recebimentoAutomatico });
     }
     saveRendas(lista);
     fecharModal(modalRenda);
@@ -557,7 +563,39 @@ document.addEventListener('DOMContentLoaded', () => {
     mostrarToast('🗑️ Fonte de renda removida.');
   }
 
+  /* ── Recebimento automático ──────────────────── */
+
+  function diasAteRecebimento(diaRec) {
+    const agora = new Date();
+    const hoje  = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+    const cand  = new Date(agora.getFullYear(), agora.getMonth(), diaRec);
+    if (diaRec < agora.getDate()) cand.setMonth(cand.getMonth() + 1);
+    return Math.round((cand - hoje) / 86400000);
+  }
+
+  function verificarRecebimentosAutomaticos() {
+    const lista  = getRendas();
+    const hojeStr = new Date().toISOString().split('T')[0];
+    let mudou = false;
+
+    lista.forEach(r => {
+      if (!r.recebimentoAutomatico || !r.diaRecebimento) return;
+      if (r.ultimoRecebimentoAutomatico === hojeStr) return; // já lançado hoje
+
+      const diff = diasAteRecebimento(Number(r.diaRecebimento));
+      if (diff === 0) {
+        window._adicionarTransacaoAutomatica?.('receita', r.nome, r.valor, hojeStr, r.categoria || 'outros_receita');
+        r.ultimoRecebimentoAutomatico = hojeStr;
+        mudou = true;
+        mostrarToast(`⚡ ${r.nome}: receita lançada automaticamente!`);
+      }
+    });
+
+    if (mudou) saveRendas(lista);
+  }
+
   window._renderRenda = renderRenda;
+  window._verificarRecebimentosAutomaticos = verificarRecebimentosAutomaticos;
 
   q('btn-nova-renda')      ?.addEventListener('click', () => abrirModalRenda(null));
   q('renda-modal-salvar')  ?.addEventListener('click', salvarRenda);
@@ -802,5 +840,6 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAssinaturas();
   renderRenda();
   verificarCobrancasAutomaticas();
+  verificarRecebimentosAutomaticos();
 
 });

@@ -53,3 +53,8 @@ alter table public.assinaturas
   add column if not exists data_ultima_parcela date,
   add column if not exists cobranca_automatica boolean not null default false,
   add column if not exists ultima_cobranca_automatica date;
+
+-- ── Novo campo da renda: recebimento automático ────────────────────
+alter table public.rendas
+  add column if not exists recebimento_automatico boolean not null default false,
+  add column if not exists ultimo_recebimento_automatico date;

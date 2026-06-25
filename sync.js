@@ -122,6 +122,8 @@
         id: r.id, user_id: userId, nome: r.nome, valor: r.valor,
         dia_recebimento: r.diaRecebimento ? Number(r.diaRecebimento) : null,
         categoria: r.categoria || 'outros_receita', notas: r.notas || null,
+        recebimento_automatico: !!r.recebimentoAutomatico,
+        ultimo_recebimento_automatico: r.ultimoRecebimentoAutomatico || null,
       })));
     }
   }
@@ -185,6 +187,8 @@
       let rendaArr = (renda || []).map(r => ({
         id: r.id, nome: r.nome, valor: Number(r.valor),
         diaRecebimento: r.dia_recebimento || '', categoria: r.categoria, notas: r.notas || '',
+        recebimentoAutomatico: !!r.recebimento_automatico,
+        ultimoRecebimentoAutomatico: r.ultimo_recebimento_automatico || '',
       }));
       let catArr = (cat || []).map(r => ({
         id: r.id, emoji: r.emoji, nome: r.nome, tipo: r.tipo, isDefault: !!r.is_default,
