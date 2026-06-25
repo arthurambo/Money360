@@ -631,13 +631,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const NOMES_MESES_PROJ = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
+  // Parcelas terminam na data da última parcela: a assinatura deixa de
+  // entrar na despesa de meses posteriores a esse mês/ano.
+  function assinaturaAtivaEm(ass, ano, mesIdx) {
+    if (!ass.parcela || !ass.dataUltimaParcela) return true;
+    const d = new Date(ass.dataUltimaParcela + 'T00:00:00');
+    return (ano * 12 + mesIdx) <= (d.getFullYear() * 12 + d.getMonth());
+  }
+
   function renderProjecao() {
     const todasTx     = getTransacoes();
     const recTotal    = todasTx.filter(t => t.tipo === 'receita').reduce((a, t) => a + t.valor, 0);
     const despTotal   = todasTx.filter(t => t.tipo === 'despesa').reduce((a, t) => a + t.valor, 0);
     const saldoAtual  = recTotal - despTotal;
+
+    const hojeP = new Date();
+    const assinaturas = getAssinaturas();
     const rendaMensal   = getRendas().reduce((a, r) => a + (r.valor || 0), 0);
-    const despesaMensal = getAssinaturas().reduce((a, s) => a + (s.valor || 0), 0);
+    const despesaMensal = assinaturas
+      .filter(a => assinaturaAtivaEm(a, hojeP.getFullYear(), hojeP.getMonth()))
+      .reduce((a, s) => a + (s.valor || 0), 0);
     const sobraMensal   = rendaMensal - despesaMensal;
 
     const elSaldo = q('proj-saldo-atual'), elRenda = q('proj-renda-mensal'),
@@ -647,13 +660,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elDesp)     elDesp.textContent     = moeda(despesaMensal);
     if (elSobra) { elSobra.textContent = moeda(sobraMensal); elSobra.className = 'ass-resumo-valor ' + (sobraMensal >= 0 ? 'valor-receita' : 'valor-despesa'); }
 
-    const hojeP = new Date();
     const meses = [];
+    let saldoAcumulado = saldoAtual;
     for (let m = 1; m <= 12; m++) {
       const d = new Date(hojeP.getFullYear(), hojeP.getMonth() + m, 1);
+      const rendaMes   = rendaMensal;
+      const despesaMes = assinaturas
+        .filter(a => assinaturaAtivaEm(a, d.getFullYear(), d.getMonth()))
+        .reduce((a, s) => a + (s.valor || 0), 0);
+      saldoAcumulado += (rendaMes - despesaMes);
       meses.push({
         label: NOMES_MESES_PROJ[d.getMonth()] + '/' + String(d.getFullYear()).slice(2),
-        saldo: saldoAtual + sobraMensal * m,
+        renda: rendaMes, despesa: despesaMes, saldo: saldoAcumulado,
       });
     }
 
@@ -705,7 +723,11 @@ document.addEventListener('DOMContentLoaded', () => {
         listaP.innerHTML = meses.map(m => `
           <div class="proj-row">
             <span class="proj-row-mes">${m.label}</span>
-            <span class="proj-row-valor ${m.saldo >= 0 ? 'valor-receita' : 'valor-despesa'}">${moeda(m.saldo)}</span>
+            <div class="proj-row-valores">
+              <span class="valor-receita">+${moeda(m.renda)}</span>
+              <span class="valor-despesa">−${moeda(m.despesa)}</span>
+              <span class="proj-row-saldo ${m.saldo >= 0 ? 'valor-receita' : 'valor-despesa'}">${moeda(m.saldo)}</span>
+            </div>
           </div>`).join('');
       }
     }

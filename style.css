@@ -301,10 +301,11 @@ html.claro input[type="date"]::-webkit-calendar-picker-indicator{filter:none;}
 .stat-desc{font-size:.75rem;color:var(--text-tertiary);margin-top:1px;}
 .proj-resumo{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
 .proj-lista{display:flex;flex-direction:column;gap:0;margin-top:18px;}
-.proj-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-subtle);font-size:.82rem;}
+.proj-row{display:grid;grid-template-columns:70px 1fr;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-subtle);font-size:.82rem;}
 .proj-row:last-child{border-bottom:none;}
-.proj-row-mes{font-weight:600;color:var(--text-primary);text-transform:capitalize;}
-.proj-row-valor{font-weight:700;font-variant-numeric:tabular-nums;}
+.proj-row-mes{font-weight:600;color:var(--text-primary);}
+.proj-row-valores{display:flex;justify-content:flex-end;align-items:center;gap:14px;font-weight:700;font-variant-numeric:tabular-nums;}
+.proj-row-saldo{padding-left:14px;border-left:1px solid var(--border-subtle);min-width:90px;text-align:right;}
 
 /* CONFIGURAÇÕES */
 .config-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
@@ -443,6 +444,10 @@ html.claro .auth-screen::before,html.claro .auth-screen::after{opacity:.18;}
   .ass-resumo-card{padding:12px 10px;}
   .ass-resumo-label{font-size:.6rem;}
   .ass-resumo-valor{font-size:.95rem;}
+
+  .proj-row{grid-template-columns:1fr;gap:4px;}
+  .proj-row-valores{justify-content:flex-start;flex-wrap:wrap;gap:10px;font-size:.78rem;}
+  .proj-row-saldo{border-left:none;padding-left:0;min-width:0;}
 
   /* Tabela mais compacta para caber sem quebrar o valor */
   .tabela{font-size:.78rem;}
