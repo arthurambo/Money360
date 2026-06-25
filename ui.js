@@ -629,7 +629,90 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  const NOMES_MESES_PROJ = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  function renderProjecao() {
+    const todasTx     = getTransacoes();
+    const recTotal    = todasTx.filter(t => t.tipo === 'receita').reduce((a, t) => a + t.valor, 0);
+    const despTotal   = todasTx.filter(t => t.tipo === 'despesa').reduce((a, t) => a + t.valor, 0);
+    const saldoAtual  = recTotal - despTotal;
+    const rendaMensal   = getRendas().reduce((a, r) => a + (r.valor || 0), 0);
+    const despesaMensal = getAssinaturas().reduce((a, s) => a + (s.valor || 0), 0);
+    const sobraMensal   = rendaMensal - despesaMensal;
+
+    const elSaldo = q('proj-saldo-atual'), elRenda = q('proj-renda-mensal'),
+          elDesp  = q('proj-despesa-mensal'), elSobra = q('proj-sobra-mensal');
+    if (elSaldo)  { elSaldo.textContent  = moeda(saldoAtual);  elSaldo.className  = 'ass-resumo-valor ' + (saldoAtual  >= 0 ? 'valor-receita' : 'valor-despesa'); }
+    if (elRenda)    elRenda.textContent    = moeda(rendaMensal);
+    if (elDesp)     elDesp.textContent     = moeda(despesaMensal);
+    if (elSobra) { elSobra.textContent = moeda(sobraMensal); elSobra.className = 'ass-resumo-valor ' + (sobraMensal >= 0 ? 'valor-receita' : 'valor-despesa'); }
+
+    const hojeP = new Date();
+    const meses = [];
+    for (let m = 1; m <= 12; m++) {
+      const d = new Date(hojeP.getFullYear(), hojeP.getMonth() + m, 1);
+      meses.push({
+        label: NOMES_MESES_PROJ[d.getMonth()] + '/' + String(d.getFullYear()).slice(2),
+        saldo: saldoAtual + sobraMensal * m,
+      });
+    }
+
+    const cvP = q('grafico-projecao'), vazP = q('proj-vazio'), listaP = q('proj-lista');
+    const semDados = !rendaMensal && !despesaMensal;
+
+    if (cvP) {
+      if (semDados) {
+        cvP.style.display = 'none';
+        if (vazP) vazP.style.display = 'block';
+        if (listaP) listaP.innerHTML = '';
+      } else {
+        cvP.style.display = 'block';
+        if (vazP) vazP.style.display = 'none';
+
+        const ctxP = cvP.getContext('2d');
+        ctxP.clearRect(0, 0, cvP.width, cvP.height);
+        const cs = getComputedStyle(document.documentElement);
+        const clrSuccess = cs.getPropertyValue('--color-success').trim() || '#30D988';
+        const clrDanger  = cs.getPropertyValue('--color-danger').trim()  || '#FF5C7A';
+        const clrGrid    = cs.getPropertyValue('--border-subtle').trim() || '#2a2d3d';
+        const clrText    = cs.getPropertyValue('--text-tertiary').trim()|| '#9094a8';
+
+        const padL = 54, padR = 14, padT = 16, padB = 28;
+        const w = cvP.width - padL - padR, h = cvP.height - padT - padB;
+        const valores = meses.map(m => m.saldo);
+        const maxV = Math.max(...valores, 0), minV = Math.min(...valores, 0);
+        const span = (maxV - minV) || 1;
+        const zeroY = padT + h - ((0 - minV) / span) * h;
+
+        ctxP.strokeStyle = clrGrid; ctxP.lineWidth = 1;
+        ctxP.beginPath(); ctxP.moveTo(padL, zeroY); ctxP.lineTo(padL + w, zeroY); ctxP.stroke();
+
+        const step = w / meses.length, barW = step * 0.6;
+        meses.forEach((m, i) => {
+          const x = padL + step * i + (step - barW) / 2;
+          const barH = Math.max(Math.abs(m.saldo) / span * h, 1);
+          const y = m.saldo >= 0 ? zeroY - barH : zeroY;
+          ctxP.fillStyle = m.saldo >= 0 ? clrSuccess : clrDanger;
+          ctxP.fillRect(x, y, barW, barH);
+          ctxP.fillStyle = clrText;
+          ctxP.font = `600 10px 'Plus Jakarta Sans',sans-serif`;
+          ctxP.textAlign = 'center';
+          ctxP.fillText(m.label, x + barW / 2, padT + h + 18);
+        });
+      }
+
+      if (listaP) {
+        listaP.innerHTML = meses.map(m => `
+          <div class="proj-row">
+            <span class="proj-row-mes">${m.label}</span>
+            <span class="proj-row-valor ${m.saldo >= 0 ? 'valor-receita' : 'valor-despesa'}">${moeda(m.saldo)}</span>
+          </div>`).join('');
+      }
+    }
+  }
+
   function renderRelatorios() {
+    renderProjecao();
     const tx = filtrarTransacoesPorPeriodo(periodoRel);
     /* Balanço por categoria */
     const divCat = q('rel-categorias');

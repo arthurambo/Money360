@@ -348,6 +348,20 @@
           </div>
         </div>
         <div class="relatorios-grid">
+          <div class="painel painel--full">
+            <div class="painel-header"><h3 class="painel-titulo">Projeção Financeira — Próximos 12 Meses</h3></div>
+            <div class="proj-resumo">
+              <div class="ass-resumo-card"><p class="ass-resumo-label">Saldo atual</p><p class="ass-resumo-valor" id="proj-saldo-atual">R$ 0,00</p></div>
+              <div class="ass-resumo-card"><p class="ass-resumo-label">Renda mensal recorrente</p><p class="ass-resumo-valor" id="proj-renda-mensal">R$ 0,00</p></div>
+              <div class="ass-resumo-card"><p class="ass-resumo-label">Despesa mensal recorrente</p><p class="ass-resumo-valor" id="proj-despesa-mensal">R$ 0,00</p></div>
+              <div class="ass-resumo-card"><p class="ass-resumo-label">Sobra mensal</p><p class="ass-resumo-valor" id="proj-sobra-mensal">R$ 0,00</p></div>
+            </div>
+            <div class="grafico-wrapper">
+              <canvas id="grafico-projecao" width="760" height="240"></canvas>
+            </div>
+            <div id="proj-lista" class="proj-lista"></div>
+            <p id="proj-vazio" class="grafico-vazio" style="display:none">Cadastre fontes de renda e gastos mensais para ver a projeção.</p>
+          </div>
           <div class="painel painel--full"><div class="painel-header"><h3 class="painel-titulo">Balanço por Categoria</h3></div><div id="rel-categorias" class="rel-lista-categorias"></div><p id="rel-vazio" class="grafico-vazio" style="display:none">Sem transações.</p></div>
           <div class="painel"><div class="painel-header"><h3 class="painel-titulo">Despesas por Categoria</h3></div><div class="grafico-wrapper"><canvas id="grafico-pizza2" width="200" height="200"></canvas><div id="grafico-legenda2" class="grafico-legenda"></div></div><p id="grafico-vazio2" class="grafico-vazio" style="display:none">Sem despesas.</p></div>
           <div class="painel"><div class="painel-header"><h3 class="painel-titulo">Estatísticas</h3></div><div id="rel-stats" class="rel-stats"></div></div>
