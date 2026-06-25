@@ -46,3 +46,10 @@ create policy "rendas_update_own" on public.rendas
   for update using (auth.uid() = user_id);
 create policy "rendas_delete_own" on public.rendas
   for delete using (auth.uid() = user_id);
+
+-- ── Novos campos da assinatura: parcela e cobrança automática ──────
+alter table public.assinaturas
+  add column if not exists parcela boolean not null default false,
+  add column if not exists data_ultima_parcela date,
+  add column if not exists cobranca_automatica boolean not null default false,
+  add column if not exists ultima_cobranca_automatica date;

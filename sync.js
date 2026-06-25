@@ -96,6 +96,9 @@
         id: a.id, user_id: userId, nome: a.nome, valor: a.valor,
         vencimento: a.vencimento ? Number(a.vencimento) : null,
         categoria: a.categoria || 'outros', notas: a.notas || null,
+        parcela: !!a.parcela, data_ultima_parcela: a.dataUltimaParcela || null,
+        cobranca_automatica: !!a.cobrancaAutomatica,
+        ultima_cobranca_automatica: a.ultimaCobrancaAutomatica || null,
       })));
     }
   }
@@ -175,6 +178,9 @@
       let assArr = (ass || []).map(r => ({
         id: r.id, nome: r.nome, valor: Number(r.valor),
         vencimento: r.vencimento || '', categoria: r.categoria, notas: r.notas || '',
+        parcela: !!r.parcela, dataUltimaParcela: r.data_ultima_parcela || '',
+        cobrancaAutomatica: !!r.cobranca_automatica,
+        ultimaCobrancaAutomatica: r.ultima_cobranca_automatica || '',
       }));
       let rendaArr = (renda || []).map(r => ({
         id: r.id, nome: r.nome, valor: Number(r.valor),
