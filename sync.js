@@ -1,8 +1,9 @@
 /* ═══════════════════════════════════════════
    MONEY360 — sync.js
-   Sincroniza carteira_transacoes / carteira_assinaturas
-   (localStorage) com as tabelas do Supabase
-   (transacoes / assinaturas), por user_id.
+   Sincroniza carteira_transacoes / carteira_assinaturas /
+   carteira_rendas / carteira_categorias (localStorage) com
+   as tabelas do Supabase (transacoes / assinaturas / rendas /
+   categorias), por user_id.
 
    • Quando o usuário está logado (via Supabase),
      toda escrita no localStorage é espelhada
@@ -14,13 +15,17 @@
 
 (function () {
 
-  const TX_KEY  = 'carteira_transacoes';
-  const ASS_KEY = 'carteira_assinaturas';
+  const TX_KEY    = 'carteira_transacoes';
+  const ASS_KEY   = 'carteira_assinaturas';
+  const RENDA_KEY = 'carteira_rendas';
+  const CAT_KEY   = 'carteira_categorias';
 
   let syncAtivo = false;
   let userId    = null;
   let lastTx    = new Map();
   let lastAss   = new Map();
+  let lastRenda = new Map();
+  let lastCat   = new Map();
 
   const origSetItem = localStorage.setItem.bind(localStorage);
 
@@ -28,8 +33,10 @@
   localStorage.setItem = function (key, value) {
     origSetItem(key, value);
     if (!syncAtivo) return;
-    if (key === TX_KEY)  syncTransacoes(parseArr(value)).catch(console.warn);
-    if (key === ASS_KEY) syncAssinaturas(parseArr(value)).catch(console.warn);
+    if (key === TX_KEY)    syncTransacoes(parseArr(value)).catch(console.warn);
+    if (key === ASS_KEY)   syncAssinaturas(parseArr(value)).catch(console.warn);
+    if (key === RENDA_KEY) syncRendas(parseArr(value)).catch(console.warn);
+    if (key === CAT_KEY)   syncCategorias(parseArr(value)).catch(console.warn);
   };
 
   function parseArr(v) { try { return JSON.parse(v) || []; } catch { return []; } }
@@ -93,6 +100,51 @@
     }
   }
 
+  /* ── Fontes de renda ── */
+  async function syncRendas(novas) {
+    const sb = window._sb;
+    if (!sb || !userId) return;
+
+    const idsNovos = new Set(novas.map(r => r.id));
+    const remover  = [...lastRenda.keys()].filter(id => !idsNovos.has(id));
+    const upsert   = novas.filter(r => !igual(lastRenda.get(r.id), r));
+
+    lastRenda = new Map(novas.map(r => [r.id, r]));
+
+    if (remover.length) {
+      await sb.from('rendas').delete().in('id', remover).eq('user_id', userId);
+    }
+    if (upsert.length) {
+      await sb.from('rendas').upsert(upsert.map(r => ({
+        id: r.id, user_id: userId, nome: r.nome, valor: r.valor,
+        dia_recebimento: r.diaRecebimento ? Number(r.diaRecebimento) : null,
+        categoria: r.categoria || 'outros_receita', notas: r.notas || null,
+      })));
+    }
+  }
+
+  /* ── Categorias ── */
+  async function syncCategorias(novas) {
+    const sb = window._sb;
+    if (!sb || !userId) return;
+
+    const idsNovos = new Set(novas.map(c => c.id));
+    const remover  = [...lastCat.keys()].filter(id => !idsNovos.has(id));
+    const upsert   = novas.filter(c => !igual(lastCat.get(c.id), c));
+
+    lastCat = new Map(novas.map(c => [c.id, c]));
+
+    if (remover.length) {
+      await sb.from('categorias').delete().in('id', remover).eq('user_id', userId);
+    }
+    if (upsert.length) {
+      await sb.from('categorias').upsert(upsert.map(c => ({
+        id: c.id, user_id: userId, emoji: c.emoji || '📦', nome: c.nome,
+        tipo: c.tipo || 'despesa', is_default: !!c.isDefault,
+      })), { onConflict: 'user_id,id' });
+    }
+  }
+
   /* ── Carrega os dados do Supabase ao logar ── */
   async function carregarDoSupabase(session) {
     const sb = window._sb;
@@ -100,12 +152,21 @@
     userId = session.user.id;
 
     try {
-      const [{ data: tx, error: errTx }, { data: ass, error: errAss }] = await Promise.all([
+      const [
+        { data: tx,    error: errTx },
+        { data: ass,   error: errAss },
+        { data: renda, error: errRenda },
+        { data: cat,   error: errCat },
+      ] = await Promise.all([
         sb.from('transacoes').select('*').eq('user_id', userId),
         sb.from('assinaturas').select('*').eq('user_id', userId),
+        sb.from('rendas').select('*').eq('user_id', userId),
+        sb.from('categorias').select('*').eq('user_id', userId),
       ]);
-      if (errTx)  console.warn('[sync] erro ao buscar transações:', errTx.message);
-      if (errAss) console.warn('[sync] erro ao buscar assinaturas:', errAss.message);
+      if (errTx)    console.warn('[sync] erro ao buscar transações:', errTx.message);
+      if (errAss)   console.warn('[sync] erro ao buscar assinaturas:', errAss.message);
+      if (errRenda) console.warn('[sync] erro ao buscar rendas:', errRenda.message);
+      if (errCat)   console.warn('[sync] erro ao buscar categorias:', errCat.message);
 
       let txArr = (tx || []).map(r => ({
         id: r.id, tipo: r.tipo, descricao: r.descricao,
@@ -115,29 +176,48 @@
         id: r.id, nome: r.nome, valor: Number(r.valor),
         vencimento: r.vencimento || '', categoria: r.categoria, notas: r.notas || '',
       }));
+      let rendaArr = (renda || []).map(r => ({
+        id: r.id, nome: r.nome, valor: Number(r.valor),
+        diaRecebimento: r.dia_recebimento || '', categoria: r.categoria, notas: r.notas || '',
+      }));
+      let catArr = (cat || []).map(r => ({
+        id: r.id, emoji: r.emoji, nome: r.nome, tipo: r.tipo, isDefault: !!r.is_default,
+      }));
 
       // Primeiro login: se o Supabase ainda não tem nada mas já existem
       // dados salvos localmente (modo local anterior), envia-os para a nuvem
       // em vez de apagá-los.
-      const localTx  = parseArr(localStorage.getItem(TX_KEY));
-      const localAss = parseArr(localStorage.getItem(ASS_KEY));
-      if (!txArr.length && localTx.length) txArr = corrigirIds(localTx);
-      if (!assArr.length && localAss.length) assArr = corrigirIds(localAss);
+      const localTx    = parseArr(localStorage.getItem(TX_KEY));
+      const localAss   = parseArr(localStorage.getItem(ASS_KEY));
+      const localRenda = parseArr(localStorage.getItem(RENDA_KEY));
+      const localCat   = parseArr(localStorage.getItem(CAT_KEY));
+      if (!txArr.length && localTx.length)       txArr    = corrigirIds(localTx);
+      if (!assArr.length && localAss.length)     assArr   = corrigirIds(localAss);
+      if (!rendaArr.length && localRenda.length) rendaArr = corrigirIds(localRenda);
+      if (!catArr.length && localCat.length)     catArr   = localCat;
 
       origSetItem(TX_KEY, JSON.stringify(txArr));
       origSetItem(ASS_KEY, JSON.stringify(assArr));
+      origSetItem(RENDA_KEY, JSON.stringify(rendaArr));
+      origSetItem(CAT_KEY, JSON.stringify(catArr));
 
-      lastTx  = new Map();
-      lastAss = new Map();
+      lastTx    = new Map();
+      lastAss   = new Map();
+      lastRenda = new Map();
+      lastCat   = new Map();
       syncAtivo = true;
 
       // Garante que os dados (locais ou da nuvem) fiquem espelhados no Supabase
       await syncTransacoes(txArr);
       await syncAssinaturas(assArr);
+      await syncRendas(rendaArr);
+      await syncCategorias(catArr);
 
       // Re-renderiza com os dados sincronizados
       window._recarregarTransacoes?.();
       window._renderAssinaturas?.();
+      window._renderRenda?.();
+      window._catsMgr?.reloadCats?.();
     } catch (err) {
       console.warn('[sync] falha ao carregar dados do Supabase:', err);
     }
@@ -146,8 +226,10 @@
   function desativarSync() {
     syncAtivo = false;
     userId = null;
-    lastTx = new Map();
-    lastAss = new Map();
+    lastTx    = new Map();
+    lastAss   = new Map();
+    lastRenda = new Map();
+    lastCat   = new Map();
   }
 
   window._sync = { carregarDoSupabase, desativarSync };

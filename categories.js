@@ -215,6 +215,13 @@
     renderCatPanel();
   }
 
+  /* Relê as categorias do localStorage (ex.: após sincronizar com o Supabase) */
+  function reloadCats() {
+    cats = loadCats();
+    populateCatSelects();
+    renderCatPanel();
+  }
+
   /* ── RENDER PANEL ─────────────────────── */
 
   function renderGrupoCat(listEl, lista) {
@@ -355,5 +362,5 @@
     setupCatPanel();
   });
 
-  window._catsMgr = { getCatMap, populateCatSelects, renderCatPanel, populateSelectByTipo, getCatsByTipo, resetCats };
+  window._catsMgr = { getCatMap, populateCatSelects, renderCatPanel, populateSelectByTipo, getCatsByTipo, resetCats, reloadCats };
 })();
