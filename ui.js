@@ -714,7 +714,7 @@ document.addEventListener('DOMContentLoaded', () => {
     r.readAsText(f); e.target.value='';
   });
 
-  q('btn-limpar-tudo-config')?.addEventListener('click', () => q('btn-limpar-tudo')?.click());
+  q('btn-limpar-tudo-config')?.addEventListener('click', () => window._confirmarApagarTudo?.());
 
   /* ══════════════════════════════════════════
      AUTO-SYNC: atualiza views abertas

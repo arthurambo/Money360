@@ -4,7 +4,7 @@
 ═══════════════════════════════════════════ */
 'use strict';
 
-const CACHE_NAME = 'money360-v12';
+const CACHE_NAME = 'money360-v13';
 
 const ASSETS = [
   './',

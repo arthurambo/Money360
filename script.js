@@ -39,7 +39,6 @@ const tabelaBody     = $('tabela-body');
 const listaVazia     = $('lista-vazia');
 const contagem       = $('contagem');
 const contagemRodape = $('contagem-rodape');
-const btnLimparTudo  = $('btn-limpar-tudo');
 
 // Resumo
 const saldoEl    = $('saldo');
@@ -118,10 +117,9 @@ function registrarEventos() {
   btnFiltrar?.addEventListener('click', aplicarFiltro);
   btnLimparFiltro?.addEventListener('click', limparFiltro);
 
-  btnLimparTudo?.addEventListener('click', () => {
-    if (!transacoes.length) return;
+  window._confirmarApagarTudo = () => {
     abrirModalEx('Deseja apagar TODAS as transações, assinaturas, fontes de renda e categorias criadas? Esta ação não pode ser desfeita.', null);
-  });
+  };
 
   // Modal exclusão
   modalCancelar?.addEventListener('click', () => fecharModalEx());
