@@ -88,6 +88,11 @@ function init() {
     transacoes = carregar(STORAGE_KEY) || [];
     filtroAtivo ? aplicarFiltro() : renderTudo();
   };
+  window._adicionarTransacaoAutomatica = (tipo, descricao, valor, data, categoria) => {
+    transacoes.push({ id: uid(), tipo, descricao, valor, data, categoria });
+    salvar(STORAGE_KEY, transacoes);
+    filtroAtivo ? aplicarFiltro() : renderTudo();
+  };
 }
 
 // ── EVENTOS ───────────────────────────────────────

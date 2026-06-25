@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     authScreen.style.display = 'none';
     appScreen.style.display  = '';
     setTimeout(() => window._notif?.verificar(), 1500);
+    setTimeout(() => window._verificarCobrancasAutomaticas?.(), 1500);
   }
 
   function mostrarAuth() {

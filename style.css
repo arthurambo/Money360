@@ -515,6 +515,18 @@ html.claro .auth-screen::before,html.claro .auth-screen::after{opacity:.18;}
 .toggle-switch input:checked + .toggle-slider{background:var(--brand-grad);}
 .toggle-switch input:checked + .toggle-slider::before{transform:translateX(20px);}
 
+/* Linha de toggle genérica (usada nos modais de formulário) */
+.campo-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.campo-toggle-info{display:flex;flex-direction:column;gap:2px;}
+.campo-toggle-nome{font-size:.85rem;font-weight:600;color:var(--text-primary);}
+.campo-toggle-desc{font-size:.76rem;color:var(--text-muted);}
+
+/* Selos nos cards de assinatura/renda */
+.ass-card-selos{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.ass-selo{display:inline-flex;align-items:center;gap:4px;font-size:.68rem;font-weight:700;
+  padding:3px 8px;border-radius:100px;background:var(--surface-overlay);color:var(--text-secondary);}
+.ass-selo--auto{background:var(--color-success-bg);color:var(--color-success);}
+
 
 @media(max-width:640px){
   .notif-device{flex-direction:column;align-items:flex-start;}

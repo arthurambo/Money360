@@ -511,6 +511,31 @@
         <div class="campo-grupo"><label class="campo-label" for="ass-vencimento">Dia de cobrança</label><div class="input-wrap"><svg class="input-leading-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg><input type="number" id="ass-vencimento" class="campo-input has-icon" placeholder="1 a 31" min="1" max="31" /></div></div>
       </div>
       <div class="campo-grupo"><label class="campo-label" for="ass-categoria">Categoria</label><div class="input-wrap"><select id="ass-categoria" class="campo-input campo-select"></select></div></div>
+
+      <div class="campo-grupo">
+        <div class="campo-toggle-row">
+          <div class="campo-toggle-info">
+            <span class="campo-toggle-nome">📆 É uma parcela?</span>
+            <span class="campo-toggle-desc">Marque se este valor tem data final (parcelamento)</span>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" id="ass-parcela" /><span class="toggle-slider"></span></label>
+        </div>
+        <div id="ass-parcela-data-wrap" class="campo-grupo" style="display:none;margin-top:10px">
+          <label class="campo-label" for="ass-data-ultima-parcela">Data da última parcela</label>
+          <div class="input-wrap"><input type="date" id="ass-data-ultima-parcela" class="campo-input" /></div>
+        </div>
+      </div>
+
+      <div class="campo-grupo">
+        <div class="campo-toggle-row">
+          <div class="campo-toggle-info">
+            <span class="campo-toggle-nome">⚡ Cobrança automática</span>
+            <span class="campo-toggle-desc">Lança a despesa automaticamente no dia da cobrança</span>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" id="ass-cobranca-automatica" /><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+
       <div class="campo-grupo"><label class="campo-label" for="ass-notas">Notas (opcional)</label><div class="input-wrap"><input type="text" id="ass-notas" class="campo-input" placeholder="Ex: plano família, 4 usuários…" maxlength="80" /></div></div>
       <p id="ass-msg-erro" class="msg-erro" style="display:none"></p>
       <div class="modal-acoes modal-acoes--edit"><button id="ass-modal-cancelar" class="btn-ghost btn-ghost--lg">Cancelar</button><button id="ass-modal-salvar" class="btn-primario" style="margin-top:0;width:auto;padding:10px 24px"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg> Salvar</button></div>

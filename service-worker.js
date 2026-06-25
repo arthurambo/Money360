@@ -4,7 +4,7 @@
 ═══════════════════════════════════════════ */
 'use strict';
 
-const CACHE_NAME = 'money360-v14';
+const CACHE_NAME = 'money360-v15';
 
 const ASSETS = [
   './',
@@ -63,9 +63,10 @@ function idbGet(db, k) {
 }
 
 function diasAteVenc(diaVenc) {
-  const hoje = new Date();
-  const cand = new Date(hoje.getFullYear(), hoje.getMonth(), diaVenc);
-  if (diaVenc < hoje.getDate()) cand.setMonth(cand.getMonth() + 1);
+  const agora = new Date();
+  const hoje  = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  const cand  = new Date(agora.getFullYear(), agora.getMonth(), diaVenc);
+  if (diaVenc < agora.getDate()) cand.setMonth(cand.getMonth() + 1);
   return Math.round((cand - hoje) / 86400000);
 }
 

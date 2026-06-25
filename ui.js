@@ -266,6 +266,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <div><p class="ass-val-label">Por ano</p><p class="ass-val-num">${moeda(s.valor*12)}</p></div>
             ${s.vencimento ? `<div><p class="ass-val-label">Vence dia</p><p class="ass-val-num">${s.vencimento}</p></div>` : ''}
           </div>
+          ${(s.parcela || s.cobrancaAutomatica) ? `<div class="ass-card-selos">
+            ${s.parcela ? `<span class="ass-selo">📆 Última parcela: ${fmtData(s.dataUltimaParcela)}</span>` : ''}
+            ${s.cobrancaAutomatica ? `<span class="ass-selo ass-selo--auto">⚡ Cobrança automática</span>` : ''}
+          </div>` : ''}
           ${s.notas ? `<p class="ass-card-notas">${esc(s.notas)}</p>` : ''}
         </div>`;
       card.querySelector('.ass-btn-edit').addEventListener('click', () => abrirModalAssinatura(s.id));
@@ -291,6 +295,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (q('ass-valor'))     q('ass-valor').value      = ass.valor;
       if (q('ass-vencimento'))q('ass-vencimento').value = ass.vencimento||'';
       window._catsMgr?.populateSelectByTipo('ass-categoria', 'assinatura', ass.categoria);
+      if (q('ass-parcela'))   q('ass-parcela').checked   = !!ass.parcela;
+      if (q('ass-data-ultima-parcela')) q('ass-data-ultima-parcela').value = ass.dataUltimaParcela||'';
+      if (q('ass-cobranca-automatica')) q('ass-cobranca-automatica').checked = !!ass.cobrancaAutomatica;
+      atualizarVisibilidadeParcela();
       if (q('ass-notas'))     q('ass-notas').value      = ass.notas||'';
     } else {
       if (titulo) titulo.textContent = 'Nova Assinatura';
@@ -300,19 +308,32 @@ document.addEventListener('DOMContentLoaded', () => {
       if (q('ass-vencimento'))q('ass-vencimento').value = '';
       const primeiraAss = window._catsMgr?.getCatsByTipo('assinatura')[0]?.id;
       window._catsMgr?.populateSelectByTipo('ass-categoria', 'assinatura', primeiraAss);
+      if (q('ass-parcela'))   q('ass-parcela').checked   = false;
+      if (q('ass-data-ultima-parcela')) q('ass-data-ultima-parcela').value = '';
+      if (q('ass-cobranca-automatica')) q('ass-cobranca-automatica').checked = false;
+      atualizarVisibilidadeParcela();
       if (q('ass-notas'))     q('ass-notas').value      = '';
     }
     abrirModal(modalAss);
     q('ass-nome')?.focus();
   }
 
+  function atualizarVisibilidadeParcela() {
+    const wrap = q('ass-parcela-data-wrap');
+    if (wrap) wrap.style.display = q('ass-parcela')?.checked ? '' : 'none';
+  }
+  q('ass-parcela')?.addEventListener('change', atualizarVisibilidadeParcela);
+
   function salvarAssinatura() {
-    const id   = q('ass-edit-id')?.value    || '';
-    const nome = q('ass-nome')?.value.trim()|| '';
-    const vStr = q('ass-valor')?.value      || '';
-    const venc = q('ass-vencimento')?.value || '';
-    const cat  = q('ass-categoria')?.value  || 'outros_assinatura';
-    const nota = q('ass-notas')?.value.trim()|| '';
+    const id      = q('ass-edit-id')?.value    || '';
+    const nome    = q('ass-nome')?.value.trim()|| '';
+    const vStr    = q('ass-valor')?.value      || '';
+    const venc    = q('ass-vencimento')?.value || '';
+    const cat     = q('ass-categoria')?.value  || 'outros_assinatura';
+    const nota    = q('ass-notas')?.value.trim()|| '';
+    const parcela = !!q('ass-parcela')?.checked;
+    const dataUltimaParcela = parcela ? (q('ass-data-ultima-parcela')?.value || '') : '';
+    const cobrancaAutomatica = !!q('ass-cobranca-automatica')?.checked;
     const errEl= q('ass-msg-erro');
 
     function errAss(msg) { if(errEl){errEl.textContent=msg;errEl.style.display='flex';} }
@@ -324,9 +345,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let lista = getAssinaturas();
     if (id) {
       const idx = lista.findIndex(a=>a.id===id);
-      if (idx !== -1) lista[idx] = {...lista[idx], nome, valor:v, vencimento:venc?+venc:'', categoria:cat, notas:nota};
+      if (idx !== -1) lista[idx] = {...lista[idx], nome, valor:v, vencimento:venc?+venc:'', categoria:cat, notas:nota, parcela, dataUltimaParcela, cobrancaAutomatica};
     } else {
-      lista.push({ id: (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2,5)), nome, valor:v, vencimento:venc?+venc:'', categoria:cat, notas:nota });
+      lista.push({ id: (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2,5)), nome, valor:v, vencimento:venc?+venc:'', categoria:cat, notas:nota, parcela, dataUltimaParcela, cobrancaAutomatica });
     }
     saveAssinaturas(lista);
     fecharModal(modalAss);
@@ -341,7 +362,53 @@ document.addEventListener('DOMContentLoaded', () => {
     mostrarToast('🗑️ Assinatura removida.');
   }
 
+  /* ── Cobrança automática ──────────────────── */
+
+  function diasAteVencimentoAss(diaVenc) {
+    const agora = new Date();
+    const hoje  = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+    const cand  = new Date(agora.getFullYear(), agora.getMonth(), diaVenc);
+    if (diaVenc < agora.getDate()) cand.setMonth(cand.getMonth() + 1);
+    return Math.round((cand - hoje) / 86400000);
+  }
+
+  // Tenta achar uma categoria de despesa com o mesmo nome da categoria de
+  // assinatura (ex.: "Educação"); se não achar, usa "Outros" (despesa).
+  function categoriaDespesaParaAssinatura(assCategoriaId) {
+    const cm = window._catsMgr?.getCatMap() || {};
+    const assCat = cm[assCategoriaId];
+    if (!assCat) return 'outros';
+    const despesas = window._catsMgr?.getCatsByTipo('despesa') || [];
+    const match = despesas.find(d => d.nome === assCat.nome);
+    return match ? match.id : 'outros';
+  }
+
+  function verificarCobrancasAutomaticas() {
+    const lista  = getAssinaturas();
+    const hoje   = new Date();
+    const hojeStr = hoje.toISOString().split('T')[0];
+    let mudou = false;
+
+    lista.forEach(ass => {
+      if (!ass.cobrancaAutomatica || !ass.vencimento) return;
+      if (ass.ultimaCobrancaAutomatica === hojeStr) return; // já lançada hoje
+      if (ass.parcela && ass.dataUltimaParcela && hojeStr > ass.dataUltimaParcela) return; // parcelamento já terminou
+
+      const diff = diasAteVencimentoAss(Number(ass.vencimento));
+      if (diff === 0) {
+        const categoria = categoriaDespesaParaAssinatura(ass.categoria);
+        window._adicionarTransacaoAutomatica?.('despesa', ass.nome, ass.valor, hojeStr, categoria);
+        ass.ultimaCobrancaAutomatica = hojeStr;
+        mudou = true;
+        mostrarToast(`⚡ ${ass.nome}: cobrança lançada automaticamente!`);
+      }
+    });
+
+    if (mudou) saveAssinaturas(lista);
+  }
+
   window._renderAssinaturas = renderAssinaturas;
+  window._verificarCobrancasAutomaticas = verificarCobrancasAutomaticas;
 
   q('btn-nova-assinatura')?.addEventListener('click', () => abrirModalAssinatura(null));
   q('ass-modal-salvar')   ?.addEventListener('click', salvarAssinatura);
@@ -734,5 +801,6 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ── Renderiza badges ao carregar ── */
   renderAssinaturas();
   renderRenda();
+  verificarCobrancasAutomaticas();
 
 });
