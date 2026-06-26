@@ -300,6 +300,7 @@ html.claro input[type="date"]::-webkit-calendar-picker-indicator{filter:none;}
 .stat-valor{font-size:1.1rem;font-weight:800;letter-spacing:-.02em;color:var(--text-primary);font-variant-numeric:tabular-nums;}
 .stat-desc{font-size:.75rem;color:var(--text-tertiary);margin-top:1px;}
 .proj-resumo{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
+#grafico-projecao{max-width:100%;height:auto;display:block;}
 .proj-lista{display:flex;flex-direction:column;gap:0;margin-top:18px;}
 .proj-row{display:grid;grid-template-columns:70px 1fr;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-subtle);font-size:.82rem;}
 .proj-row:last-child{border-bottom:none;}
