@@ -183,7 +183,12 @@ html.claro input[type="date"]::-webkit-calendar-picker-indicator{filter:none;}
 .grafico-vazio{text-align:center;color:var(--text-tertiary);font-size:.83rem;padding:12px 0 4px;}
 
 /* PERÍODO RÁPIDO */
-.periodo-rapido{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border-subtle);}
+.periodo-rapido{display:flex;gap:6px;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid var(--border-subtle);}
+.periodo-custom{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:14px;}
+.periodo-custom-ou{font-size:.72rem;color:var(--text-tertiary);font-weight:700;text-transform:uppercase;letter-spacing:.1em;}
+.periodo-sel{background:transparent;border:1.5px solid var(--border-default);border-radius:var(--r-full);padding:5px 14px;color:var(--text-secondary);font-family:var(--font);font-size:.78rem;font-weight:600;cursor:pointer;outline:none;transition:border-color var(--t-fast),color var(--t-fast);}
+.periodo-sel:focus{border-color:var(--brand-violet);color:var(--text-primary);}
+.periodo-sel--ativo{border-color:var(--brand-violet);color:var(--brand-violet);}
 .periodo-btn{padding:5px 14px;border-radius:var(--r-full);border:1.5px solid var(--border-default);background:transparent;color:var(--text-secondary);font-family:var(--font);font-size:.78rem;font-weight:600;cursor:pointer;transition:all var(--t-fast);white-space:nowrap;}
 .periodo-btn:hover{border-color:var(--brand-violet);color:var(--brand-violet);background:rgba(124,111,247,.08);}
 .periodo-btn--ativo{background:var(--brand-grad);border-color:transparent;color:white;box-shadow:0 0 12px rgba(124,111,247,.35);}

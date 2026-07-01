@@ -608,10 +608,21 @@ document.addEventListener('DOMContentLoaded', () => {
   ══════════════════════════════════════════ */
   const CORES_REL = ['#7C6FF7','#2EC4B6','#FF5C7A','#FFC542','#5B9CF6','#30D988','#fb923c','#f472b6','#34d399','#94a3b8'];
 
-  let periodoRel = 28; // dias; 0 = todo período
+  let periodoRel    = 28;  // dias; 0 = todo período
+  let periodoRelMes = '';  // '01'..'12' ou ''
+  let periodoRelAno = '';  // '2026' etc. ou ''
 
   function filtrarTransacoesPorPeriodo(dias) {
     const todas = getTransacoes();
+    // Modo período personalizado (mês/ano) tem prioridade
+    if (periodoRelMes || periodoRelAno) {
+      return todas.filter(t => {
+        if (periodoRelMes && periodoRelAno) return t.data.startsWith(periodoRelAno + '-' + periodoRelMes);
+        if (periodoRelAno)  return t.data.startsWith(periodoRelAno);
+        if (periodoRelMes)  return t.data.slice(5, 7) === periodoRelMes;
+        return true;
+      });
+    }
     if (dias === 0) return todas;
     const limite = new Date();
     limite.setDate(limite.getDate() - dias);
@@ -619,12 +630,48 @@ document.addEventListener('DOMContentLoaded', () => {
     return todas.filter(t => t.data >= limiteStr);
   }
 
+  function popularAnosRel() {
+    const sel = q('sel-ano-rel');
+    if (!sel) return;
+    const anoAtual = new Date().getFullYear();
+    const todas    = getTransacoes();
+    const anoMin   = todas.length
+      ? Math.min(...todas.map(t => parseInt(t.data.slice(0, 4))))
+      : anoAtual;
+    const saved = sel.value;
+    sel.innerHTML = '<option value="">Todos os anos</option>';
+    for (let a = anoAtual; a >= anoMin; a--) {
+      const opt = document.createElement('option');
+      opt.value = a; opt.textContent = a;
+      sel.appendChild(opt);
+    }
+    if (saved) sel.value = saved;
+  }
+
+  function handlePeriodoCustom() {
+    periodoRelMes = q('sel-mes-rel')?.value || '';
+    periodoRelAno = q('sel-ano-rel')?.value || '';
+    if (periodoRelMes || periodoRelAno) {
+      document.querySelectorAll('.periodo-btn-rel').forEach(b => b.classList.remove('periodo-btn--ativo'));
+      q('sel-mes-rel')?.classList.toggle('periodo-sel--ativo', !!periodoRelMes);
+      q('sel-ano-rel')?.classList.toggle('periodo-sel--ativo', !!periodoRelAno);
+    }
+    renderRelatorios();
+  }
+  q('sel-mes-rel')?.addEventListener('change', handlePeriodoCustom);
+  q('sel-ano-rel')?.addEventListener('change', handlePeriodoCustom);
+
   // Liga botões de período dos relatórios
   document.querySelectorAll('.periodo-btn-rel').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.periodo-btn-rel').forEach(b => b.classList.remove('periodo-btn--ativo'));
       btn.classList.add('periodo-btn--ativo');
-      periodoRel = +btn.dataset.dias;
+      periodoRel    = +btn.dataset.dias;
+      periodoRelMes = '';
+      periodoRelAno = '';
+      const selM = q('sel-mes-rel'), selA = q('sel-ano-rel');
+      if (selM) { selM.value = ''; selM.classList.remove('periodo-sel--ativo'); }
+      if (selA) { selA.value = ''; selA.classList.remove('periodo-sel--ativo'); }
       renderRelatorios();
     });
   });
@@ -734,6 +781,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderRelatorios() {
+    popularAnosRel();
     renderProjecao();
     const tx = filtrarTransacoesPorPeriodo(periodoRel);
     /* Balanço por categoria */
