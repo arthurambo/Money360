@@ -44,9 +44,9 @@
     .adm-subtitle{font-size:.78rem;color:var(--text-muted);margin-top:1px;}
     .adm-header-r{display:flex;align-items:center;gap:10px;}
     .adm-user-email{font-size:.78rem;color:var(--text-muted);}
-    .btn-signout{padding:7px 14px;background:none;border:1px solid var(--border);
-      border-radius:8px;color:var(--text-muted);font-size:.78rem;cursor:pointer;transition:.15s;}
-    .btn-signout:hover{border-color:var(--danger);color:var(--danger);}
+    .btn-voltar{padding:7px 14px;background:none;border:1px solid var(--border);
+      border-radius:8px;color:var(--text-muted);font-size:.78rem;cursor:pointer;transition:.15s;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+    .btn-voltar:hover{border-color:var(--brand);color:var(--brand);}
 
     /* ── Nav tabs ─────────────────────────── */
     .adm-nav{background:var(--surface);padding:0 32px;border-bottom:1px solid var(--border);}
@@ -158,7 +158,7 @@
     </div>
     <div class="adm-header-r">
       <span class="adm-user-email" id="adm-email"></span>
-      <button class="btn-signout" id="btn-signout">Sair</button>
+      <a class="btn-voltar" href="./">← Voltar ao app</a>
     </div>
   </header>
 
@@ -292,10 +292,6 @@ GRANT EXECUTE ON FUNCTION admin_get_users() TO authenticated;`;
     }
   }
 
-  document.getElementById('btn-signout').addEventListener('click', async () => {
-    await sb.auth.signOut();
-    window.location.href = './';
-  });
 
   /* ── Tabs ───────────────────────────────── */
   document.querySelectorAll('.adm-tab').forEach(btn => {
