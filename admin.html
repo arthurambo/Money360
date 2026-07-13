@@ -277,12 +277,16 @@ GRANT EXECUTE ON FUNCTION admin_get_users() TO authenticated;`;
         showGate('Você precisa estar logado no Money360 para acessar esta página.');
         return;
       }
-      if (!ADMIN_EMAILS.includes(session.user.email)) {
-        showGate('Acesso negado. Este e-mail não tem permissão de administrador.');
+
+      // Login com Google pode guardar o e-mail em user_metadata em vez de email
+      const email = session.user.email || session.user.user_metadata?.email || '';
+
+      if (!ADMIN_EMAILS.includes(email)) {
+        showGate('Acesso negado. E-mail encontrado na sessão: "' + (email || '(vazio)') + '"');
         return;
       }
 
-      showPanel(session.user.email);
+      showPanel(email);
       loadUsers();
     } catch (e) {
       showGate('❌ Erro inesperado: ' + e.message);

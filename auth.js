@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const ADMIN_EMAILS = ['ambrosio.arthur@gmail.com'];
 
   function aplicarSessao(session) {
-    const email = session?.user?.email || '';
+    const email = session?.user?.email || session?.user?.user_metadata?.email || '';
     const el = q('config-user-email');
     if (el) el.textContent = email || '—';
     const btnAdmin = q('btn-admin');
