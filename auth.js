@@ -205,17 +205,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (data.session) {
         aplicarSessao(data.session);
+        toast('✅ Conta criada com sucesso!');
+        mostrarApp();
       } else {
-        // Sem sessão automática — tenta login direto mesmo assim.
-        const { data: loginData } = await sb.auth.signInWithPassword({ email, password });
-        if (loginData?.session) aplicarSessao(loginData.session);
-        else {
-          const el = q('config-user-email');
-          if (el) el.textContent = email;
+        // Supabase não gerou sessão — pode ser email já existente via Google/OAuth
+        // ou confirmação de e-mail pendente. Tenta login para distinguir os casos.
+        const { data: loginData, error: loginErr } = await sb.auth.signInWithPassword({ email, password });
+        if (loginData?.session) {
+          aplicarSessao(loginData.session);
+          toast('✅ Conta criada com sucesso!');
+          mostrarApp();
+        } else if (loginErr) {
+          // Login com senha falhou → e-mail já existe por outro método (Google, etc.)
+          showError('reg-error', '❌ Este e-mail já possui uma conta vinculada ao Google. Use o botão "Entrar com Google".');
+        } else {
+          // Sessão pendente de confirmação de e-mail
+          toast('📧 Verifique seu e-mail para confirmar o cadastro.');
         }
       }
-      toast('✅ Conta criada com sucesso!');
-      mostrarApp();
     } catch (err) {
       showError('reg-error', '⚠️ Não foi possível conectar. Verifique sua internet.');
     } finally {
