@@ -223,21 +223,34 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJra3Rlcnpycmlpa3JpY3h3bXpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NDI2NjksImV4cCI6MjA5NjUxODY2OX0.e8oZ1fMZEbVmQ31aPwDcq78k9t2Ypg3IZHr7QrHk6e8';
   const ADMIN_EMAILS      = ['ambrosio.arthur@gmail.com'];
 
-  const SETUP_SQL = `CREATE OR REPLACE FUNCTION admin_get_users()
+  const SETUP_SQL = `-- Execute no SQL Editor do Supabase:
+CREATE OR REPLACE FUNCTION admin_get_users()
 RETURNS TABLE(id uuid, email text, created_at timestamptz, last_sign_in_at timestamptz)
 LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  _email text;
 BEGIN
-  IF auth.email() NOT IN ('ambrosio.arthur@gmail.com') THEN
+  _email := current_setting('request.jwt.claims', true)::jsonb ->> 'email';
+  IF _email IS NULL OR _email NOT IN ('ambrosio.arthur@gmail.com') THEN
     RAISE EXCEPTION 'Unauthorized';
   END IF;
   RETURN QUERY
-    SELECT u.id, u.email, u.created_at, u.last_sign_in_at
+    SELECT u.id, u.email::text, u.created_at, u.last_sign_in_at
     FROM auth.users u
     ORDER BY u.created_at DESC;
 END;
-$$;`;
+$$;
+GRANT EXECUTE ON FUNCTION admin_get_users() TO authenticated;`;
 
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let sb = null;
+  try {
+    if (!window.supabase) throw new Error('Biblioteca Supabase não carregou (verifique sua conexão).');
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch (e) {
+    document.getElementById('gate-msg').textContent = '❌ Erro ao inicializar: ' + e.message;
+    throw e;
+  }
+
   let allUsers = [];
 
   /* ── Gate ───────────────────────────────── */
@@ -255,20 +268,25 @@ $$;`;
 
   /* ── Init ───────────────────────────────── */
   async function init() {
-    const { data } = await sb.auth.getSession();
-    const session  = data?.session;
+    try {
+      const { data, error } = await sb.auth.getSession();
+      if (error) { showGate('❌ Erro de sessão: ' + error.message); return; }
 
-    if (!session) {
-      showGate('Você precisa estar logado para acessar esta página.');
-      return;
-    }
-    if (!ADMIN_EMAILS.includes(session.user.email)) {
-      showGate('Você não tem permissão de administrador.');
-      return;
-    }
+      const session = data?.session;
+      if (!session) {
+        showGate('Você precisa estar logado no Money360 para acessar esta página.');
+        return;
+      }
+      if (!ADMIN_EMAILS.includes(session.user.email)) {
+        showGate('Acesso negado. Este e-mail não tem permissão de administrador.');
+        return;
+      }
 
-    showPanel(session.user.email);
-    loadUsers();
+      showPanel(session.user.email);
+      loadUsers();
+    } catch (e) {
+      showGate('❌ Erro inesperado: ' + e.message);
+    }
   }
 
   document.getElementById('btn-signout').addEventListener('click', async () => {
