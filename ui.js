@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (nome === 'transacoes')  renderTabelaTransacoes();
     if (nome === 'assinaturas') renderAssinaturas();
     if (nome === 'renda')       renderRenda();
+    if (nome === 'eventos')     window._renderEventos?.();
     if (nome === 'configuracoes') syncTemaConfig();
   }
 
@@ -146,7 +147,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const badge  = q('contagem2');
     if (!corpo) return;
     corpo.innerHTML = '';
-    const sorted = [...lista].sort((a,b)=>b.data.localeCompare(a.data));
+    const ini  = q('filtro2-inicio')?.value || '';
+    const fim  = q('filtro2-fim')?.value    || '';
+    const catF = q('filtro2-categoria')?.value || 'todas';
+    const evGs = catF === 'todas' ? (window._getEventGastos?.(ini || null, fim || null) || []) : [];
+    const sorted = [...lista, ...evGs].sort((a,b)=>b.data.localeCompare(a.data));
     const empty = !sorted.length;
     if (vazio)  vazio.style.display  = empty ? 'flex' : 'none';
     if (tabela) tabela.style.display = empty ? 'none' : '';
@@ -154,22 +159,43 @@ document.addEventListener('DOMContentLoaded', () => {
     sorted.forEach(t => {
       const _cm = catMapUI(); const cat = _cm[t.categoria]||_cm.outros||{emoji:'📦',nome:t.categoria};
       const tr  = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="td-data">${fmtData(t.data)}</td>
-        <td>${esc(t.descricao)}</td>
-        <td><span class="chip-categoria">${cat.emoji} ${cat.nome}</span></td>
-        <td><span class="badge badge--${t.tipo}">${t.tipo==='receita'?'↑':'↓'} ${t.tipo}</span></td>
-        <td class="td-valor valor-${t.tipo}">${t.tipo==='receita'?'+':'−'} ${moeda(t.valor)}</td>
-        <td class="td-acoes">
-          <button class="btn-editar"  title="Editar"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg></button>
-          <button class="btn-excluir" title="Remover">×</button>
-        </td>`;
-      tr.querySelector('.btn-editar') .addEventListener('click', () => window._abrirEdicao?.(t.id));
-      tr.querySelector('.btn-excluir').addEventListener('click', () => window._solicitarExclusao?.(t.id));
+      if (t._evNome) {
+        tr.innerHTML = `
+          <td class="td-data">${fmtData(t.data)}</td>
+          <td>${esc(t.descricao)}<br><small class="tx-ev-label">${esc(t._evEmoji)} ${esc(t._evNome)}</small></td>
+          <td><span class="chip-categoria tx-ev-chip">📅 evento</span></td>
+          <td><span class="badge badge--despesa">↓ despesa</span></td>
+          <td class="td-valor valor-despesa">− ${moeda(t.valor)}</td>
+          <td style="text-align:right;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:4px">
+            <button class="btn-editar" title="Editar"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg></button>
+            <button class="btn-excluir" title="Remover">×</button>
+          </span></td>`;
+        tr.querySelector('.btn-editar').addEventListener('click', () => window._abrirGastosEditar?.(t._evId, t._gastoId));
+        tr.querySelector('.btn-excluir').addEventListener('click', () => {
+          if (confirm(`Remover "${t.descricao}" (${moeda(t.valor)}) do evento ${t._evNome}?`)) {
+            window._excluirGastoExterno?.(t._evId, t._gastoId);
+          }
+        });
+      } else {
+        tr.innerHTML = `
+          <td class="td-data">${fmtData(t.data)}</td>
+          <td>${esc(t.descricao)}</td>
+          <td><span class="chip-categoria">${cat.emoji} ${cat.nome}</span></td>
+          <td><span class="badge badge--${t.tipo}">${t.tipo==='receita'?'↑':'↓'} ${t.tipo}</span></td>
+          <td class="td-valor valor-${t.tipo}">${t.tipo==='receita'?'+':'−'} ${moeda(t.valor)}</td>
+          <td class="td-acoes">
+            <button class="btn-editar"  title="Editar"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg></button>
+            <button class="btn-excluir" title="Remover">×</button>
+          </td>`;
+        tr.querySelector('.btn-editar') .addEventListener('click', () => window._abrirEdicao?.(t.id));
+        tr.querySelector('.btn-excluir').addEventListener('click', () => window._solicitarExclusao?.(t.id));
+      }
       corpo.appendChild(tr);
     });
     if (badge) badge.textContent = `${lista.length}`;
   }
+
+  window._renderTabelaTransacoes = renderTabelaTransacoes;
 
   q('btn-filtrar2')?.addEventListener('click', () => {
     const ini  = q('filtro2-inicio')?.value || '';
@@ -630,6 +656,30 @@ document.addEventListener('DOMContentLoaded', () => {
     return todas.filter(t => t.data >= limiteStr);
   }
 
+  function filtrarGastosPorPeriodo(gastos) {
+    if (periodoRelMes || periodoRelAno) {
+      return gastos.filter(g => {
+        if (periodoRelMes && periodoRelAno) return g.data.startsWith(periodoRelAno + '-' + periodoRelMes);
+        if (periodoRelAno) return g.data.startsWith(periodoRelAno);
+        if (periodoRelMes) return g.data.slice(5, 7) === periodoRelMes;
+        return true;
+      });
+    }
+    if (periodoRel === 0) return gastos;
+    const limite = new Date();
+    limite.setDate(limite.getDate() - periodoRel);
+    const limiteStr = limite.toISOString().split('T')[0];
+    return gastos.filter(g => g.data >= limiteStr);
+  }
+
+  function resolverCat(cat) {
+    if (typeof cat === 'string' && cat.startsWith('__ev_')) {
+      const ev = (window._getEventos?.() || []).find(e => '__ev_' + e.id === cat);
+      return ev ? { emoji: ev.emoji || '📦', nome: ev.nome } : { emoji: '📦', nome: 'Evento' };
+    }
+    const cm = catMapUI(); return cm[cat] || cm.outros || { emoji: '📦', nome: cat };
+  }
+
   function popularAnosRel() {
     const sel = q('sel-ano-rel');
     if (!sel) return;
@@ -784,6 +834,12 @@ document.addEventListener('DOMContentLoaded', () => {
     popularAnosRel();
     renderProjecao();
     const tx = filtrarTransacoesPorPeriodo(periodoRel);
+    /* Mapa de gastos de eventos no período */
+    const evMapNoP = {};
+    (window._getEventos?.() || []).forEach(ev => {
+      const tot = filtrarGastosPorPeriodo(ev.gastos || []).reduce((a, g) => a + (g.valor || 0), 0);
+      if (tot > 0) evMapNoP['__ev_' + ev.id] = tot;
+    });
     /* Balanço por categoria */
     const divCat = q('rel-categorias');
     const relVaz = q('rel-vazio');
@@ -794,12 +850,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!mapa[t.categoria]) mapa[t.categoria]={rec:0,des:0};
         mapa[t.categoria][t.tipo==='receita'?'rec':'des'] += t.valor;
       });
+      Object.entries(evMapNoP).forEach(([k, des]) => {
+        if (!mapa[k]) mapa[k] = { rec: 0, des: 0 };
+        mapa[k].des += des;
+      });
       const entradas = Object.entries(mapa).sort((a,b)=>(b[1].rec+b[1].des)-(a[1].rec+a[1].des));
       if (!entradas.length) { if(relVaz) relVaz.style.display='block'; }
       else {
         if(relVaz) relVaz.style.display='none';
         entradas.forEach(([cat,v])=>{
-          const _cm3 = catMapUI(); const info = _cm3[cat]||_cm3.outros||{emoji:'📦',nome:cat};
+          const info = resolverCat(cat);
           const saldo = v.rec-v.des, max = Math.max(v.rec,v.des,1);
           const row = document.createElement('div'); row.className='rel-cat-row';
           row.innerHTML=`
@@ -827,11 +887,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (cv2._leaveFn)   { cv2.removeEventListener('mouseleave', cv2._leaveFn);  cv2._leaveFn=null; }
       if (cv2._touchFn)   { cv2.removeEventListener('touchstart', cv2._touchFn);  cv2._touchFn=null; }
       const desp = tx.filter(t=>t.tipo==='despesa');
-      if (!desp.length) { if(vaz2) vaz2.style.display='block'; cv2.style.display='none'; }
+      if (!desp.length && !Object.keys(evMapNoP).length) { if(vaz2) vaz2.style.display='block'; cv2.style.display='none'; }
       else {
         if(vaz2) vaz2.style.display='none'; cv2.style.display='block';
         const map={};
         desp.forEach(t=>{ map[t.categoria]=(map[t.categoria]||0)+t.valor; });
+        Object.entries(evMapNoP).forEach(([k,v])=>{ map[k]=(map[k]||0)+v; });
         const total=Object.values(map).reduce((a,b)=>a+b,0);
         const cxP=cv2.width/2,cyP=cv2.height/2,r=Math.min(cxP,cyP)-10,ri=r*.55;
         const cs=getComputedStyle(document.documentElement);
@@ -847,7 +908,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ctx2.fillStyle=cor;ctx2.fill();
           ctx2.beginPath();ctx2.arc(cxP,cyP,ri,0,2*Math.PI);ctx2.fillStyle=clrHole;ctx2.fill();
           ang=ea;
-          const _cm4=catMapUI(); const c=_cm4[cat]||_cm4.outros||{emoji:'📦',nome:cat},pct=((val/total)*100).toFixed(1);
+          const c=resolverCat(cat),pct=((val/total)*100).toFixed(1);
           slices.push({sa,ea,val,cor,emoji:c.emoji,nome:c.nome,pct});
           const li=document.createElement('div');li.className='legenda-item';
           li.innerHTML=`<span class="legenda-cor" style="background:${cor}"></span><span>${c.emoji} ${c.nome} (${pct}%)</span>`;
@@ -907,10 +968,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const mR  = tx.filter(t=>t.tipo==='receita').sort((a,b)=>b.valor-a.valor)[0];
       const mD  = tx.filter(t=>t.tipo==='despesa').sort((a,b)=>b.valor-a.valor)[0];
       const eco = rec>0?((sal/rec)*100).toFixed(1):'0';
+      const evts = window._getEventos?.() || [];
+      const totEv = ev => window._totalEvento?.(ev) || 0;
+      const maiorEv = evts.length ? evts.reduce((a,b) => totEv(a) >= totEv(b) ? a : b) : null;
       sd.innerHTML=`
         <div class="stat-item"><span class="stat-label">Total de registros</span><span class="stat-valor">${tx.length}</span></div>
         <div class="stat-item"><span class="stat-label">Maior receita</span><span class="stat-valor valor-receita">${mR?moeda(mR.valor):'—'}</span>${mR?`<span class="stat-desc">${esc(mR.descricao)}</span>`:''}</div>
         <div class="stat-item"><span class="stat-label">Maior despesa</span><span class="stat-valor valor-despesa">${mD?moeda(mD.valor):'—'}</span>${mD?`<span class="stat-desc">${esc(mD.descricao)}</span>`:''}</div>
+        ${maiorEv?`<div class="stat-item"><span class="stat-label">Maior evento</span><span class="stat-valor valor-despesa">${moeda(totEv(maiorEv))}</span><span class="stat-desc">${esc(maiorEv.emoji||'📦')} ${esc(maiorEv.nome)}</span></div>`:''}
         <div class="stat-item"><span class="stat-label">Taxa de economia</span><span class="stat-valor ${sal>=0?'valor-receita':'valor-despesa'}">${eco}%</span></div>
         <div class="stat-item"><span class="stat-label">Saldo total</span><span class="stat-valor ${sal>=0?'valor-receita':'valor-despesa'}">${moeda(sal)}</span></div>`;
     }

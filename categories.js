@@ -121,7 +121,7 @@
   const TX_SELECT_IDS    = ['input-categoria', 'edit-categoria'];
   const ASS_SELECT_ID    = 'ass-categoria';
   const RENDA_SELECT_ID  = 'renda-categoria';
-  const FILTER_SELECT_ID = 'filtro2-categoria';
+  const FILTER_SELECT_IDS = ['filtro-categoria', 'filtro2-categoria'];
 
   /* Preenche um <select> de transação filtrando por tipo (receita/despesa) */
   function populateSelectByTipo(selectId, tipo, desiredValue) {
@@ -159,9 +159,10 @@
     const rendaSel = document.getElementById(RENDA_SELECT_ID);
     if (rendaSel) populateSelectByTipo(RENDA_SELECT_ID, 'receita', rendaSel.value);
 
-    // Filtro de relatório: mostra todas as categorias, de qualquer tipo
-    const fsel = document.getElementById(FILTER_SELECT_ID);
-    if (fsel) {
+    // Filtros de categoria: mostram todas as categorias, de qualquer tipo
+    FILTER_SELECT_IDS.forEach(sid => {
+      const fsel = document.getElementById(sid);
+      if (!fsel) return;
       const prev = fsel.value;
       fsel.innerHTML = '<option value="todas">Todas</option>';
       cats.forEach(c => {
@@ -171,7 +172,7 @@
         fsel.appendChild(opt);
       });
       if (prev && [...fsel.options].some(o => o.value === prev)) fsel.value = prev;
-    }
+    });
   }
 
   const TIPOS_VALIDOS = ['receita', 'despesa', 'assinatura'];

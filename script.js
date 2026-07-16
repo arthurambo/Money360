@@ -30,7 +30,7 @@ const btnDespesa     = $('btn-despesa');
 // Filtros
 const filtroInicio    = $('filtro-inicio');
 const filtroFim       = $('filtro-fim');
-const filtroTipo      = $('filtro-tipo');
+const filtroCat       = $('filtro-categoria');
 const btnFiltrar      = $('btn-filtrar');
 const btnLimparFiltro = $('btn-limpar-filtro');
 
@@ -161,15 +161,15 @@ function aplicarPeriodo(dias) {
 
 // ── FILTROS ───────────────────────────────────────
 function aplicarFiltro() {
-  const ini  = filtroInicio?.value || '';
-  const fim  = filtroFim?.value    || '';
-  const tipo = filtroTipo?.value   || 'todos';
-  if (!ini && !fim && tipo === 'todos') {
+  const ini = filtroInicio?.value || '';
+  const fim = filtroFim?.value    || '';
+  const cat = filtroCat?.value    || 'todas';
+  if (!ini && !fim && cat === 'todas') {
     filtroAtivo = false;
     renderLista(transacoes); resumo(transacoes); grafico(transacoes); return;
   }
   transacoesFiltradas = transacoes.filter(t =>
-    (tipo === 'todos' || t.tipo === tipo) && (!ini || t.data >= ini) && (!fim || t.data <= fim)
+    (cat === 'todas' || t.categoria === cat) && (!ini || t.data >= ini) && (!fim || t.data <= fim)
   );
   filtroAtivo = true;
   renderLista(transacoesFiltradas); resumo(transacoesFiltradas); grafico(transacoesFiltradas);
@@ -178,7 +178,7 @@ function aplicarFiltro() {
 function limparFiltro() {
   if (filtroInicio) filtroInicio.value = '';
   if (filtroFim)    filtroFim.value    = '';
-  if (filtroTipo)   filtroTipo.value   = 'todos';
+  if (filtroCat)    filtroCat.value    = filtroCat.options[0]?.value || 'todas';
   filtroAtivo = false;
   document.querySelectorAll('.periodo-btn').forEach(b =>
     b.classList.toggle('periodo-btn--ativo', b.dataset.dias === '28')
@@ -307,39 +307,64 @@ function renderTudo() { renderLista(transacoes); resumo(transacoes); grafico(tra
 function renderLista(lista) {
   if (!tabelaBody) return;
   tabelaBody.innerHTML = '';
-  const tEl = $('tabela-transacoes');
-  const ord = [...lista].sort((a, b) => b.data.localeCompare(a.data));
-  const vaz = ord.length === 0;
+  const tEl  = $('tabela-transacoes');
+  const ini  = filtroInicio?.value || '';
+  const fim  = filtroFim?.value    || '';
+  const evGs = window._getEventGastos?.(ini || null, fim || null) || [];
+  const ord  = [...lista, ...evGs].sort((a, b) => b.data.localeCompare(a.data));
+  const vaz  = ord.length === 0;
   if (listaVazia) listaVazia.style.display = vaz ? 'flex' : 'none';
   if (tEl)        tEl.style.display        = vaz ? 'none' : '';
   ord.forEach(t => {
     const _cm = catMap(); const cat = _cm[t.categoria] || _cm.outros || { emoji: '📦', nome: t.categoria };
     const tr  = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="td-data">${fmtD(t.data)}</td>
-      <td>${esc(t.descricao)}</td>
-      <td><span class="chip-categoria">${cat.emoji} ${cat.nome}</span></td>
-      <td><span class="badge badge--${t.tipo}">${t.tipo === 'receita' ? '↑' : '↓'} ${t.tipo}</span></td>
-      <td class="td-valor valor-${t.tipo}">${t.tipo === 'receita' ? '+' : '−'} ${moeda(t.valor)}</td>
-      <td class="td-acoes">
-        <button class="btn-editar" title="Editar">
-          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
-        </button>
-        <button class="btn-excluir" title="Remover">×</button>
-      </td>`;
-    tr.querySelector('.btn-editar').addEventListener('click', () => abrirEdicao(t.id));
-    tr.querySelector('.btn-excluir').addEventListener('click', () => solicitarExclusao(t.id));
+    if (t._evNome) {
+      tr.innerHTML = `
+        <td class="td-data">${fmtD(t.data)}</td>
+        <td>${esc(t.descricao)}<br><small class="tx-ev-label">${esc(t._evEmoji)} ${esc(t._evNome)}</small></td>
+        <td><span class="chip-categoria tx-ev-chip">📅 evento</span></td>
+        <td><span class="badge badge--despesa">↓ despesa</span></td>
+        <td class="td-valor valor-despesa">− ${moeda(t.valor)}</td>
+        <td style="text-align:right;white-space:nowrap"><span style="display:inline-flex;align-items:center;gap:4px">
+          <button class="btn-editar" title="Editar"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg></button>
+          <button class="btn-excluir" title="Remover">×</button>
+        </span></td>`;
+      tr.querySelector('.btn-editar' ).addEventListener('click', () => window._abrirGastosEditar?.(t._evId, t._gastoId));
+      tr.querySelector('.btn-excluir').addEventListener('click', () => {
+        if (confirm(`Remover "${t.descricao}" (${moeda(t.valor)}) do evento ${t._evNome}?`))
+          window._excluirGastoExterno?.(t._evId, t._gastoId);
+      });
+    } else {
+      tr.innerHTML = `
+        <td class="td-data">${fmtD(t.data)}</td>
+        <td>${esc(t.descricao)}</td>
+        <td><span class="chip-categoria">${cat.emoji} ${cat.nome}</span></td>
+        <td><span class="badge badge--${t.tipo}">${t.tipo === 'receita' ? '↑' : '↓'} ${t.tipo}</span></td>
+        <td class="td-valor valor-${t.tipo}">${t.tipo === 'receita' ? '+' : '−'} ${moeda(t.valor)}</td>
+        <td class="td-acoes">
+          <button class="btn-editar" title="Editar">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+          </button>
+          <button class="btn-excluir" title="Remover">×</button>
+        </td>`;
+      tr.querySelector('.btn-editar').addEventListener('click', () => abrirEdicao(t.id));
+      tr.querySelector('.btn-excluir').addEventListener('click', () => solicitarExclusao(t.id));
+    }
     tabelaBody.appendChild(tr);
   });
   const n = lista.length, txt = n === 1 ? '1 transação' : `${n} transações`;
   const label = filtroAtivo ? `${txt} (filtrado)` : txt;
-  if (contagem)      contagem.textContent      = label;
+  if (contagem)       contagem.textContent       = label;
   if (contagemRodape) contagemRodape.textContent = label;
 }
 
 function resumo(lista) {
+  const ini  = filtroInicio?.value || '';
+  const fim  = filtroFim?.value    || '';
+  const evGs = window._getEventGastos?.(ini || null, fim || null) || [];
   const rec  = lista.filter(t => t.tipo === 'receita').reduce((a, t) => a + t.valor, 0);
-  const desp = lista.filter(t => t.tipo === 'despesa').reduce((a, t) => a + t.valor, 0);
+  const desp = lista.filter(t => t.tipo === 'despesa').reduce((a, t) => a + t.valor, 0)
+             + evGs.reduce((a, g) => a + g.valor, 0);
   const s    = rec - desp;
   if (saldoEl)    saldoEl.textContent    = moeda(s);
   if (receitasEl) receitasEl.textContent = moeda(rec);
@@ -350,19 +375,31 @@ function resumo(lista) {
   if (b) b.style.background = s < 0 ? 'var(--color-danger)' : '';
 }
 
+function resolverCatDash(cat) {
+  if (typeof cat === 'string' && cat.startsWith('__ev_')) {
+    const ev = (window._getEventos?.() || []).find(e => '__ev_' + e.id === cat);
+    return ev ? { emoji: ev.emoji || '📦', nome: ev.nome } : { emoji: '📦', nome: 'Evento' };
+  }
+  const cm = catMap(); return cm[cat] || cm.outros || { emoji: '📦', nome: cat };
+}
+
 function grafico(lista) {
   if (!canvas || !ctx) return;
   const leg = $('grafico-legenda');
   const vaz = $('grafico-vazio');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (leg) leg.innerHTML = '';
+  const ini  = filtroInicio?.value || '';
+  const fim  = filtroFim?.value    || '';
+  const evGs = window._getEventGastos?.(ini || null, fim || null) || [];
   const desp = lista.filter(t => t.tipo === 'despesa');
-  if (!desp.length) {
+  if (!desp.length && !evGs.length) {
     if (vaz) vaz.style.display = 'block'; canvas.style.display = 'none'; return;
   }
   if (vaz) vaz.style.display = 'none'; canvas.style.display = 'block';
   const por = {};
   desp.forEach(t => { por[t.categoria] = (por[t.categoria] || 0) + t.valor; });
+  evGs.forEach(g => { const k = '__ev_' + g._evId; por[k] = (por[k] || 0) + g.valor; });
   const total = Object.values(por).reduce((a, b) => a + b, 0);
   const cx = canvas.width/2, cy = canvas.height/2, r = Math.min(cx,cy)-10, ri = r*0.55;
   let ang = -Math.PI/2;
@@ -374,7 +411,7 @@ function grafico(lista) {
     ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--surface-raised').trim()||'#131622';
     ctx.fill(); ang+=f;
     if (leg) {
-      const _cm2=catMap(); const c=_cm2[cat]||_cm2.outros||{emoji:'📦',nome:cat}, d=document.createElement('div');
+      const c=resolverCatDash(cat), d=document.createElement('div');
       d.className='legenda-item';
       d.innerHTML=`<span class="legenda-cor" style="background:${cor}"></span><span>${c.emoji} ${c.nome} (${(val/total*100).toFixed(1)}%)</span>`;
       leg.appendChild(d);

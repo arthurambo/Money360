@@ -4,7 +4,7 @@
 ═══════════════════════════════════════════ */
 'use strict';
 
-const CACHE_NAME = 'money360-v23';
+const CACHE_NAME = 'money360-v28';
 
 const ASSETS = [
   './',
@@ -15,6 +15,7 @@ const ASSETS = [
   './auth.js',
   './sync.js',
   './script.js',
+  './eventos.js',
   './ui.js',
   './manifest.json',
   './icon.svg',
