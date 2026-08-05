@@ -139,16 +139,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return window._catsMgr ? window._catsMgr.getCatMap() : { outros: { emoji: '📦', nome: 'Outros' } };
   }
 
-  function renderTabelaTransacoes(lista) {
+  function renderTabelaTransacoes(lista, ini, fim) {
     if (!lista) lista = getTransacoes();
+    ini = ini || '';
+    fim = fim || '';
     const corpo  = q('tabela-body2');
     const vazio  = q('lista-vazia2');
     const tabela = q('tabela-transacoes2');
     const badge  = q('contagem2');
     if (!corpo) return;
     corpo.innerHTML = '';
-    const ini  = q('filtro2-inicio')?.value || '';
-    const fim  = q('filtro2-fim')?.value    || '';
     const catF = q('filtro2-categoria')?.value || 'todas';
     const evGs = catF === 'todas' ? (window._getEventGastos?.(ini || null, fim || null) || []) : [];
     const sorted = [...lista, ...evGs].sort((a,b)=>b.data.localeCompare(a.data));
@@ -197,23 +197,131 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window._renderTabelaTransacoes = renderTabelaTransacoes;
 
-  q('btn-filtrar2')?.addEventListener('click', () => {
-    const ini  = q('filtro2-inicio')?.value || '';
-    const fim  = q('filtro2-fim')?.value    || '';
-    const tipo = q('filtro2-tipo')?.value   || 'todos';
-    const cat  = q('filtro2-categoria')?.value || 'todas';
-    const res  = getTransacoes().filter(t => {
-      return (tipo==='todos'||t.tipo===tipo) && (cat==='todas'||t.categoria===cat)
-          && (!ini||t.data>=ini) && (!fim||t.data<=fim);
+  /* ── Filtros de transações: estado de período ── */
+  let periodoTxDias = 0;
+  let periodoTxMes  = '';
+  let periodoTxAno  = '';
+
+  function popularAnosTx() {
+    const sel = q('sel-ano-tx');
+    if (!sel) return;
+    const anoAtual = new Date().getFullYear();
+    const todas    = getTransacoes();
+    const anoMin   = todas.length ? Math.min(...todas.map(t => +t.data.slice(0,4))) : anoAtual;
+    const saved    = sel.value;
+    sel.innerHTML  = '<option value="">Todos os anos</option>';
+    for (let a = anoAtual; a >= anoMin; a--) {
+      const opt = document.createElement('option');
+      opt.value = a; opt.textContent = a;
+      sel.appendChild(opt);
+    }
+    if (saved) sel.value = saved;
+  }
+
+  function atualizarCatsFiltro2(tipo) {
+    const sel = q('filtro2-categoria');
+    if (!sel) return;
+    const mgr = window._catsMgr;
+    if (!mgr) return;
+    const prev = sel.value;
+    sel.innerHTML = '<option value="todas">Todas</option>';
+    const cats = tipo === 'receita'  ? mgr.getCatsByTipo('receita')
+               : tipo === 'despesa' ? mgr.getCatsByTipo('despesa')
+               : [...mgr.getCatsByTipo('receita'), ...mgr.getCatsByTipo('despesa')];
+    cats.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.emoji + ' ' + c.nome;
+      sel.appendChild(opt);
     });
-    renderTabelaTransacoes(res);
+    if (prev !== 'todas' && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+    else sel.value = 'todas';
+  }
+
+  function aplicarFiltroTx() {
+    popularAnosTx();
+    const tipo = q('filtro2-tipo')?.value || 'todos';
+    const cat  = q('filtro2-categoria')?.value || 'todas';
+    let ini = '', fim = '';
+
+    if (periodoTxMes || periodoTxAno) {
+      const ano = periodoTxAno || new Date().getFullYear().toString();
+      if (periodoTxMes) {
+        ini = `${ano}-${periodoTxMes}-01`;
+        const lastDay = new Date(+ano, +periodoTxMes, 0).getDate();
+        fim = `${ano}-${periodoTxMes}-${String(lastDay).padStart(2,'0')}`;
+      } else {
+        ini = `${ano}-01-01`;
+        fim = `${ano}-12-31`;
+      }
+    } else if (periodoTxDias > 0) {
+      const hoje = new Date();
+      fim = hoje.toISOString().slice(0,10);
+      const de  = new Date(hoje); de.setDate(de.getDate() - periodoTxDias);
+      ini = de.toISOString().slice(0,10);
+    }
+
+    const res = getTransacoes().filter(t =>
+      (tipo === 'todos' || t.tipo === tipo)
+      && (cat === 'todas' || t.categoria === cat)
+      && (!ini || t.data >= ini)
+      && (!fim || t.data <= fim)
+    );
+    renderTabelaTransacoes(res, ini, fim);
+  }
+
+  // Period buttons
+  document.querySelectorAll('.periodo-btn-tx').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.periodo-btn-tx').forEach(b => b.classList.remove('periodo-btn--ativo'));
+      btn.classList.add('periodo-btn--ativo');
+      periodoTxDias = +btn.dataset.dias;
+      periodoTxMes  = '';
+      periodoTxAno  = '';
+      const selM = q('sel-mes-tx'), selA = q('sel-ano-tx');
+      if (selM) { selM.value = ''; selM.classList.remove('periodo-sel--ativo'); }
+      if (selA) { selA.value = ''; selA.classList.remove('periodo-sel--ativo'); }
+      aplicarFiltroTx();
+    });
   });
 
-  q('btn-limpar-filtro2')?.addEventListener('click', () => {
-    ['filtro2-inicio','filtro2-fim'].forEach(id => { const e=q(id); if(e)e.value=''; });
-    ['filtro2-tipo','filtro2-categoria'].forEach(id => { const e=q(id); if(e)e.value=e.options[0].value; });
-    renderTabelaTransacoes();
+  function handlePeriodoCustomTx() {
+    periodoTxMes = q('sel-mes-tx')?.value || '';
+    periodoTxAno = q('sel-ano-tx')?.value || '';
+    if (periodoTxMes || periodoTxAno) {
+      document.querySelectorAll('.periodo-btn-tx').forEach(b => b.classList.remove('periodo-btn--ativo'));
+      q('sel-mes-tx')?.classList.toggle('periodo-sel--ativo', !!periodoTxMes);
+      q('sel-ano-tx')?.classList.toggle('periodo-sel--ativo', !!periodoTxAno);
+    }
+    aplicarFiltroTx();
+  }
+  q('sel-mes-tx')?.addEventListener('change', handlePeriodoCustomTx);
+  q('sel-ano-tx')?.addEventListener('change', handlePeriodoCustomTx);
+
+  q('filtro2-tipo')?.addEventListener('change', () => {
+    atualizarCatsFiltro2(q('filtro2-tipo').value);
+    aplicarFiltroTx();
   });
+  q('filtro2-categoria')?.addEventListener('change', aplicarFiltroTx);
+
+  q('btn-limpar-filtro2')?.addEventListener('click', () => {
+    periodoTxDias = 0;
+    periodoTxMes  = '';
+    periodoTxAno  = '';
+    document.querySelectorAll('.periodo-btn-tx').forEach(b => b.classList.remove('periodo-btn--ativo'));
+    document.querySelector('.periodo-btn-tx[data-dias="0"]')?.classList.add('periodo-btn--ativo');
+    const selM = q('sel-mes-tx'), selA = q('sel-ano-tx');
+    if (selM) { selM.value = ''; selM.classList.remove('periodo-sel--ativo'); }
+    if (selA) { selA.value = ''; selA.classList.remove('periodo-sel--ativo'); }
+    const tipoSel = q('filtro2-tipo');
+    if (tipoSel) tipoSel.value = 'todos';
+    atualizarCatsFiltro2('todos');
+    aplicarFiltroTx();
+  });
+
+  // Inicializa o select de categoria e anos
+  atualizarCatsFiltro2('todos');
+  aplicarFiltroTx();
 
   /* ══════════════════════════════════════════
      ASSINATURAS
@@ -320,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (q('ass-nome'))      q('ass-nome').value       = ass.nome;
       if (q('ass-valor'))     q('ass-valor').value      = ass.valor;
       if (q('ass-vencimento'))q('ass-vencimento').value = ass.vencimento||'';
-      window._catsMgr?.populateSelectByTipo('ass-categoria', 'assinatura', ass.categoria);
+      window._catsMgr?.populateSelectByTipo('ass-categoria', 'despesa', ass.categoria);
       if (q('ass-parcela'))   q('ass-parcela').checked   = !!ass.parcela;
       if (q('ass-data-ultima-parcela')) q('ass-data-ultima-parcela').value = ass.dataUltimaParcela||'';
       if (q('ass-cobranca-automatica')) q('ass-cobranca-automatica').checked = !!ass.cobrancaAutomatica;
@@ -332,8 +440,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (q('ass-nome'))      q('ass-nome').value       = '';
       if (q('ass-valor'))     q('ass-valor').value      = '';
       if (q('ass-vencimento'))q('ass-vencimento').value = '';
-      const primeiraAss = window._catsMgr?.getCatsByTipo('assinatura')[0]?.id;
-      window._catsMgr?.populateSelectByTipo('ass-categoria', 'assinatura', primeiraAss);
+      const primeiraAss = window._catsMgr?.getCatsByTipo('despesa')[0]?.id;
+      window._catsMgr?.populateSelectByTipo('ass-categoria', 'despesa', primeiraAss);
       if (q('ass-parcela'))   q('ass-parcela').checked   = false;
       if (q('ass-data-ultima-parcela')) q('ass-data-ultima-parcela').value = '';
       if (q('ass-cobranca-automatica')) q('ass-cobranca-automatica').checked = false;
@@ -355,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const nome    = q('ass-nome')?.value.trim()|| '';
     const vStr    = q('ass-valor')?.value      || '';
     const venc    = q('ass-vencimento')?.value || '';
-    const cat     = q('ass-categoria')?.value  || 'outros_assinatura';
+    const cat     = q('ass-categoria')?.value  || 'outros';
     const nota    = q('ass-notas')?.value.trim()|| '';
     const parcela = !!q('ass-parcela')?.checked;
     const dataUltimaParcela = parcela ? (q('ass-data-ultima-parcela')?.value || '') : '';
@@ -792,19 +900,42 @@ document.addEventListener('DOMContentLoaded', () => {
         const clrGrid    = cs.getPropertyValue('--border-subtle').trim() || '#2a2d3d';
         const clrText    = cs.getPropertyValue('--text-tertiary').trim()|| '#9094a8';
 
-        const padL = 54, padR = 14, padT = 16, padB = 28;
+        const padL = 58, padR = 14, padT = 16, padB = 28;
         const w = cvP.width - padL - padR, h = cvP.height - padT - padB;
         const valores = meses.map(m => m.saldo);
         const maxV = Math.max(...valores, 0), minV = Math.min(...valores, 0);
         const span = (maxV - minV) || 1;
         const zeroY = padT + h - ((0 - minV) / span) * h;
 
+        /* ── Eixo Y: ticks + grid tracejado ── */
+        const NICE = [1,2,5,10,20,25,50,100,200,250,500,1000,2000,2500,5000,10000,20000,25000,50000,100000,200000,500000];
+        const yStep = NICE.find(s => s >= span / 5) || NICE[NICE.length - 1];
+        function fmtY(v) {
+          const a = Math.abs(v);
+          if (a >= 1000) return 'R$ ' + (v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'k';
+          return 'R$ ' + v.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+        }
+        const tickStart = Math.ceil(minV / yStep) * yStep;
+        ctxP.font = `500 9px 'Plus Jakarta Sans',sans-serif`;
+        ctxP.textAlign = 'right';
+        for (let v = tickStart; v <= maxV + yStep * 0.1; v += yStep) {
+          const yPos = padT + h - ((v - minV) / span) * h;
+          if (yPos < padT - 4 || yPos > padT + h + 4) continue;
+          ctxP.strokeStyle = clrGrid; ctxP.lineWidth = 1; ctxP.setLineDash([3, 4]);
+          ctxP.beginPath(); ctxP.moveTo(padL, yPos); ctxP.lineTo(padL + w, yPos); ctxP.stroke();
+          ctxP.setLineDash([]);
+          ctxP.fillStyle = clrText;
+          ctxP.fillText(fmtY(v), padL - 6, yPos + 3.5);
+        }
+
+        /* ── Linha do zero (sólida) ── */
         ctxP.strokeStyle = clrGrid; ctxP.lineWidth = 1;
         ctxP.beginPath(); ctxP.moveTo(padL, zeroY); ctxP.lineTo(padL + w, zeroY); ctxP.stroke();
 
-        const step = w / meses.length, barW = step * 0.6;
+        /* ── Barras + labels X ── */
+        const barStep = w / meses.length, barW = barStep * 0.6;
         meses.forEach((m, i) => {
-          const x = padL + step * i + (step - barW) / 2;
+          const x = padL + barStep * i + (barStep - barW) / 2;
           const barH = Math.max(Math.abs(m.saldo) / span * h, 1);
           const y = m.saldo >= 0 ? zeroY - barH : zeroY;
           ctxP.fillStyle = m.saldo >= 0 ? clrSuccess : clrDanger;

@@ -23,21 +23,7 @@
     { id: 'lazer',                emoji: '🎮', nome: 'Lazer',        tipo: 'despesa', isDefault: true },
     { id: 'educacao',             emoji: '📚', nome: 'Educação',     tipo: 'despesa', isDefault: true },
     { id: 'outros',               emoji: '📦', nome: 'Outros',       tipo: 'despesa', isDefault: true },
-    // Assinatura
-    { id: 'streaming',            emoji: '🎬', nome: 'Streaming',         tipo: 'assinatura', isDefault: true },
-    { id: 'musica',                emoji: '🎵', nome: 'Música',            tipo: 'assinatura', isDefault: true },
-    { id: 'software',              emoji: '💾', nome: 'Software / App',    tipo: 'assinatura', isDefault: true },
-    { id: 'cloud',                  emoji: '☁️', nome: 'Nuvem',             tipo: 'assinatura', isDefault: true },
-    { id: 'servico-digital',       emoji: '🌐', nome: 'Serviço Digital',   tipo: 'assinatura', isDefault: true },
-    { id: 'funcionario',           emoji: '👤', nome: 'Funcionário',       tipo: 'assinatura', isDefault: true },
-    { id: 'internet',              emoji: '📡', nome: 'Internet / Tel.',   tipo: 'assinatura', isDefault: true },
-    { id: 'seguro',                emoji: '🛡️', nome: 'Seguro',            tipo: 'assinatura', isDefault: true },
-    { id: 'academia',              emoji: '🏋️', nome: 'Academia',          tipo: 'assinatura', isDefault: true },
-    { id: 'educacao_assinatura',  emoji: '📚', nome: 'Educação',          tipo: 'assinatura', isDefault: true },
-    { id: 'outros_assinatura',    emoji: '📦', nome: 'Outros',            tipo: 'assinatura', isDefault: true },
   ];
-
-  const ASSINATURA_DEFAULTS = DEFAULT_CATS.filter(c => c.tipo === 'assinatura');
 
   // Tipo correto de cada id padrão antigo (salvo antes de existir o campo "tipo")
   const TIPO_MIGRACAO = {
@@ -56,7 +42,7 @@
   // mesmo em categorias que já têm "tipo" salvo (ex.: corrigir um bug antigo,
   // ou adicionar um novo conjunto de categorias padrão).
   const MIGRACAO_VERSAO_KEY = 'carteira_categorias_versao';
-  const MIGRACAO_ATUAL      = 3;
+  const MIGRACAO_ATUAL      = 4;
 
   let cats = [];
   // Lembra qual tipo está sendo filtrado em cada select de transação,
@@ -79,14 +65,8 @@
       }
     });
 
-    if (forcarCorrecao) {
-      // Garante que as categorias padrão de assinatura existem (recurso novo)
-      ASSINATURA_DEFAULTS.forEach(def => {
-        if (!result.some(c => c.id === def.id)) result.push({ ...def });
-      });
-    }
-
-    return result;
+    // Remove categorias de assinatura (unificadas com despesa a partir da v4)
+    return result.filter(c => c.tipo !== 'assinatura');
   }
 
   function loadCats() {
@@ -121,7 +101,7 @@
   const TX_SELECT_IDS    = ['input-categoria', 'edit-categoria'];
   const ASS_SELECT_ID    = 'ass-categoria';
   const RENDA_SELECT_ID  = 'renda-categoria';
-  const FILTER_SELECT_IDS = ['filtro-categoria', 'filtro2-categoria'];
+  const FILTER_SELECT_IDS = ['filtro-categoria'];
 
   /* Preenche um <select> de transação filtrando por tipo (receita/despesa) */
   function populateSelectByTipo(selectId, tipo, desiredValue) {
@@ -151,9 +131,9 @@
       populateSelectByTipo(id, lastTipo[id] || 'receita', sel?.value);
     });
 
-    // Select de assinatura: sempre filtra por categorias do tipo "assinatura"
+    // Select de assinatura: usa categorias de despesa
     const assSel = document.getElementById(ASS_SELECT_ID);
-    if (assSel) populateSelectByTipo(ASS_SELECT_ID, 'assinatura', assSel.value);
+    if (assSel) populateSelectByTipo(ASS_SELECT_ID, 'despesa', assSel.value);
 
     // Select de renda: sempre filtra por categorias do tipo "receita"
     const rendaSel = document.getElementById(RENDA_SELECT_ID);
@@ -175,7 +155,7 @@
     });
   }
 
-  const TIPOS_VALIDOS = ['receita', 'despesa', 'assinatura'];
+  const TIPOS_VALIDOS = ['receita', 'despesa'];
 
   /* ── CRUD ─────────────────────────────── */
 
@@ -256,23 +236,18 @@
   }
 
   function renderCatPanel() {
-    const listDespesa    = document.getElementById('cat-lista-despesa');
-    const listReceita     = document.getElementById('cat-lista-receita');
-    const listAssinatura = document.getElementById('cat-lista-assinatura');
-    const despesas    = cats.filter(c => c.tipo === 'despesa');
-    const receitas     = cats.filter(c => c.tipo === 'receita');
-    const assinaturas  = cats.filter(c => c.tipo === 'assinatura');
+    const listDespesa = document.getElementById('cat-lista-despesa');
+    const listReceita  = document.getElementById('cat-lista-receita');
+    const despesas = cats.filter(c => c.tipo === 'despesa');
+    const receitas  = cats.filter(c => c.tipo === 'receita');
 
     renderGrupoCat(listDespesa, despesas);
     renderGrupoCat(listReceita, receitas);
-    renderGrupoCat(listAssinatura, assinaturas);
 
     const cntD = document.getElementById('cat-count-despesa');
     const cntR = document.getElementById('cat-count-receita');
-    const cntA = document.getElementById('cat-count-assinatura');
     if (cntD) cntD.textContent = despesas.length;
     if (cntR) cntR.textContent = receitas.length;
-    if (cntA) cntA.textContent = assinaturas.length;
   }
 
   /* ── FORM ─────────────────────────────── */
@@ -284,7 +259,6 @@
     tipoFormCat = tipo;
     document.getElementById('cat-tipo-despesa')?.classList.toggle('ativo', tipo === 'despesa');
     document.getElementById('cat-tipo-receita')?.classList.toggle('ativo', tipo === 'receita');
-    document.getElementById('cat-tipo-assinatura')?.classList.toggle('ativo', tipo === 'assinatura');
   }
 
   function iniciarEdicaoCat(id) {
@@ -351,12 +325,31 @@
     nomeInp?.addEventListener('keydown', e => { if (e.key === 'Enter') salvarCat(); });
     document.getElementById('cat-tipo-despesa')?.addEventListener('click', () => selTipoFormCat('despesa'));
     document.getElementById('cat-tipo-receita')?.addEventListener('click', () => selTipoFormCat('receita'));
-    document.getElementById('cat-tipo-assinatura')?.addEventListener('click', () => selTipoFormCat('assinatura'));
+  }
+
+  const ASS_CATS_ANTIGAS = new Set(['streaming','musica','software','cloud','servico-digital','funcionario','internet','seguro','academia','educacao_assinatura','outros_assinatura']);
+
+  function migrarCategoriasAssinaturas() {
+    try {
+      const raw = localStorage.getItem('carteira_assinaturas');
+      if (!raw) return;
+      const lista = JSON.parse(raw);
+      if (!Array.isArray(lista)) return;
+      let alterado = false;
+      lista.forEach(ass => {
+        if (ass.categoria && ASS_CATS_ANTIGAS.has(ass.categoria)) {
+          ass.categoria = 'outros';
+          alterado = true;
+        }
+      });
+      if (alterado) localStorage.setItem('carteira_assinaturas', JSON.stringify(lista));
+    } catch {}
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     cats = loadCats();
-    saveCats(); // persiste imediatamente o resultado de uma eventual migração
+    migrarCategoriasAssinaturas();
+    saveCats();
     localStorage.setItem(MIGRACAO_VERSAO_KEY, String(MIGRACAO_ATUAL));
     populateCatSelects();
     renderCatPanel();

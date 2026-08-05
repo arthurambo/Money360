@@ -118,6 +118,38 @@
     .empty{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
       padding:28px;text-align:center;color:var(--text-muted);font-size:.85rem;}
 
+    /* ── Ajuda tab ───────────────────────── */
+    .ajuda-adm-filtros{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+    .ajuda-filtro{padding:5px 12px;background:var(--surface);border:1px solid var(--border);
+      border-radius:100px;font-size:.75rem;font-weight:600;color:var(--text-muted);cursor:pointer;transition:.15s;}
+    .ajuda-filtro:hover{border-color:var(--brand);color:var(--brand);}
+    .ajuda-filtro--on{background:rgba(124,111,247,.15);border-color:var(--brand);color:var(--brand);}
+    .ajuda-adm-list{display:flex;flex-direction:column;gap:12px;}
+    .ajuda-adm-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;}
+    .ajuda-adm-head{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+    .ajuda-adm-email{font-size:.75rem;color:var(--text-muted);margin-left:auto;}
+    .ajuda-adm-data{font-size:.72rem;color:var(--text-muted);}
+    .ajuda-adm-cat{font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:100px;
+      background:rgba(124,111,247,.15);color:var(--brand);}
+    .ajuda-adm-titulo{font-size:.95rem;font-weight:700;margin-bottom:6px;}
+    .ajuda-adm-desc{font-size:.83rem;color:var(--text-muted);line-height:1.65;white-space:pre-wrap;margin-bottom:12px;}
+    .ajuda-adm-reply-existing{padding:10px 12px;background:rgba(46,196,182,.07);
+      border:1px solid rgba(46,196,182,.2);border-radius:8px;font-size:.82rem;
+      color:#7fd8d0;line-height:1.6;margin-bottom:10px;white-space:pre-wrap;}
+    .ajuda-adm-reply-lbl{font-size:.7rem;font-weight:700;color:#2EC4B6;margin-bottom:5px;}
+    .ajuda-adm-form{display:flex;flex-direction:column;gap:8px;}
+    .ajuda-adm-textarea{width:100%;padding:10px 12px;background:var(--surface-raised);
+      border:1px solid var(--border);border-radius:8px;color:var(--text);
+      font-family:inherit;font-size:.83rem;line-height:1.6;resize:vertical;min-height:80px;}
+    .ajuda-adm-textarea:focus{outline:none;border-color:var(--brand);}
+    .ajuda-adm-btn-reply{align-self:flex-end;padding:7px 18px;background:var(--brand-grad);
+      border:none;border-radius:8px;color:#fff;font-size:.8rem;font-weight:700;cursor:pointer;}
+    .ajuda-adm-btn-reply:disabled{opacity:.5;cursor:not-allowed;}
+    .adm-status{font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:100px;}
+    .adm-status--pendente{background:rgba(255,197,66,.12);color:#FFC542;}
+    .adm-status--respondido{background:rgba(46,196,182,.12);color:#2EC4B6;}
+    .adm-status--resolvido{background:rgba(46,204,113,.12);color:#2ecc71;}
+
     /* ── Responsive ───────────────────────── */
     @media(max-width:900px){
       .stats-grid{grid-template-columns:repeat(3,1fr);}
@@ -166,6 +198,7 @@
     <div class="adm-tabs">
       <button class="adm-tab adm-tab--on" data-tab="usuarios">👥 Usuários</button>
       <button class="adm-tab" data-tab="estatisticas">📊 Estatísticas</button>
+      <button class="adm-tab" data-tab="ajuda">❓ Ajuda</button>
     </div>
   </nav>
 
@@ -211,6 +244,24 @@
       </div>
 
     </div><!-- /estatisticas -->
+
+    <!-- Ajuda -->
+    <div id="tab-ajuda" class="adm-view">
+      <div class="sec-hd">
+        <span class="sec-hd-title">❓ Relatos dos usuários</span>
+        <span class="badge" id="ajuda-count">—</span>
+      </div>
+      <div id="ajuda-filtros" class="ajuda-adm-filtros">
+        <button class="ajuda-filtro ajuda-filtro--on" data-f="todos">Todos</button>
+        <button class="ajuda-filtro" data-f="pendente">Pendente</button>
+        <button class="ajuda-filtro" data-f="respondido">Respondido</button>
+        <button class="ajuda-filtro" data-f="bug">🐛 Bug</button>
+        <button class="ajuda-filtro" data-f="recurso">💡 Recurso</button>
+        <button class="ajuda-filtro" data-f="duvida">❓ Dúvida</button>
+      </div>
+      <div id="ajuda-adm-list"></div>
+    </div>
+
   </main>
 </div><!-- /panel -->
 
@@ -220,7 +271,7 @@
 
   const SUPABASE_URL      = 'https://rkkterzrriikricxwmzd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJra3Rlcnpycmlpa3JpY3h3bXpkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NDI2NjksImV4cCI6MjA5NjUxODY2OX0.e8oZ1fMZEbVmQ31aPwDcq78k9t2Ypg3IZHr7QrHk6e8';
-  const ADMIN_EMAILS      = ['ambrosio.arthur@gmail.com'];
+  const ADMIN_EMAILS      = ['ambrosio.arthur@gmail.com', 'dracoforgegm@gmail.com'];
 
   const SETUP_SQL = `-- Execute no SQL Editor do Supabase:
 CREATE OR REPLACE FUNCTION admin_get_users()
@@ -230,7 +281,7 @@ DECLARE
   _email text;
 BEGIN
   _email := current_setting('request.jwt.claims', true)::jsonb ->> 'email';
-  IF _email IS NULL OR _email NOT IN ('ambrosio.arthur@gmail.com') THEN
+  IF _email IS NULL OR _email NOT IN ('ambrosio.arthur@gmail.com','dracoforgegm@gmail.com') THEN
     RAISE EXCEPTION 'Unauthorized';
   END IF;
   RETURN QUERY
@@ -301,6 +352,7 @@ GRANT EXECUTE ON FUNCTION admin_get_users() TO authenticated;`;
       btn.classList.add('adm-tab--on');
       document.getElementById('tab-' + btn.dataset.tab).classList.add('adm-view--on');
       if (btn.dataset.tab === 'estatisticas' && allUsers.length) renderStats();
+      if (btn.dataset.tab === 'ajuda' && !ajudaCarregado) loadAjuda();
     });
   });
 
@@ -499,6 +551,171 @@ GRANT EXECUTE ON FUNCTION admin_get_users() TO authenticated;`;
     return String(s)
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
       .replace(/"/g,'&quot;');
+  }
+
+  function fmtData(s) {
+    if (!s) return '—';
+    return new Date(s).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  /* ── Ajuda ──────────────────────────────── */
+  let ajudaCarregado = false;
+  let todosRelatos   = [];
+  let filtroAtual    = 'todos';
+
+  const AJUDA_SQL = `-- Execute no SQL Editor do Supabase:
+
+-- 1. Criar tabela
+CREATE TABLE IF NOT EXISTS public.ajuda_relatos (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       uuid,
+  user_email    text,
+  categoria     text NOT NULL,
+  titulo        text NOT NULL,
+  descricao     text NOT NULL,
+  status        text NOT NULL DEFAULT 'pendente',
+  resposta      text,
+  respondido_em timestamptz,
+  criado_em     timestamptz DEFAULT now()
+);
+ALTER TABLE public.ajuda_relatos ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "users_insert" ON public.ajuda_relatos FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "users_select" ON public.ajuda_relatos FOR SELECT USING (auth.uid() = user_id);
+
+-- 2. Função admin buscar
+CREATE OR REPLACE FUNCTION admin_get_ajuda()
+RETURNS TABLE(id uuid, user_id uuid, user_email text, categoria text,
+  titulo text, descricao text, status text, resposta text,
+  respondido_em timestamptz, criado_em timestamptz)
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE _email text;
+BEGIN
+  _email := current_setting('request.jwt.claims', true)::jsonb ->> 'email';
+  IF _email NOT IN ('ambrosio.arthur@gmail.com','dracoforgegm@gmail.com') THEN RAISE EXCEPTION 'Unauthorized'; END IF;
+  RETURN QUERY SELECT r.id,r.user_id,r.user_email,r.categoria,r.titulo,r.descricao,
+    r.status,r.resposta,r.respondido_em,r.criado_em
+    FROM public.ajuda_relatos r ORDER BY r.criado_em DESC;
+END; $$;
+GRANT EXECUTE ON FUNCTION admin_get_ajuda() TO authenticated;
+
+-- 3. Função admin responder
+CREATE OR REPLACE FUNCTION admin_responder_ajuda(p_id uuid, p_resposta text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE _email text;
+BEGIN
+  _email := current_setting('request.jwt.claims', true)::jsonb ->> 'email';
+  IF _email NOT IN ('ambrosio.arthur@gmail.com','dracoforgegm@gmail.com') THEN RAISE EXCEPTION 'Unauthorized'; END IF;
+  UPDATE public.ajuda_relatos
+    SET status='respondido', resposta=p_resposta, respondido_em=now() WHERE id=p_id;
+END; $$;
+GRANT EXECUTE ON FUNCTION admin_responder_ajuda(uuid, text) TO authenticated;`;
+
+  async function loadAjuda() {
+    const listEl = document.getElementById('ajuda-adm-list');
+    listEl.innerHTML = '<div class="loading">Carregando relatos…</div>';
+
+    const { data, error } = await sb.rpc('admin_get_ajuda');
+
+    if (error) {
+      listEl.innerHTML = `
+        <div class="setup-notice">
+          <p style="font-size:1.8rem;margin-bottom:10px">⚙️</p>
+          <h3>Configure a tabela de ajuda no Supabase</h3>
+          <p>Execute o SQL abaixo no <b>SQL Editor</b> do seu projeto Supabase e recarregue a página:</p>
+          <div class="setup-sql">${escHtml(AJUDA_SQL)}</div>
+          <button class="setup-copy" id="btn-copy-ajuda-sql">📋 Copiar SQL</button>
+          <p style="margin-top:12px;font-size:.75rem;color:var(--text-muted)">
+            Erro: ${escHtml(error.message || error.code || 'desconhecido')}
+          </p>
+        </div>`;
+      document.getElementById('btn-copy-ajuda-sql').addEventListener('click', () => {
+        navigator.clipboard.writeText(AJUDA_SQL)
+          .then(() => { document.getElementById('btn-copy-ajuda-sql').textContent = '✅ Copiado!'; })
+          .catch(() => {});
+      });
+      return;
+    }
+
+    ajudaCarregado = true;
+    todosRelatos   = data || [];
+    document.getElementById('ajuda-count').textContent = todosRelatos.length;
+
+    document.querySelectorAll('.ajuda-filtro').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.ajuda-filtro').forEach(b => b.classList.remove('ajuda-filtro--on'));
+        btn.classList.add('ajuda-filtro--on');
+        filtroAtual = btn.dataset.f;
+        renderAjuda();
+      });
+    });
+
+    renderAjuda();
+  }
+
+  const CAT_LABEL_ADM   = { bug: '🐛 Bug', recurso: '💡 Recurso', duvida: '❓ Dúvida' };
+  const STATUS_LABEL_ADM = { pendente: 'Pendente', respondido: 'Respondido', resolvido: 'Resolvido' };
+  const STATUS_CLS_ADM   = { pendente: 'adm-status--pendente', respondido: 'adm-status--respondido', resolvido: 'adm-status--resolvido' };
+
+  function renderAjuda() {
+    const listEl = document.getElementById('ajuda-adm-list');
+    let lista = todosRelatos;
+    if (filtroAtual !== 'todos') {
+      lista = lista.filter(r => r.status === filtroAtual || r.categoria === filtroAtual);
+    }
+    if (!lista.length) {
+      listEl.innerHTML = '<div class="empty">Nenhum relato encontrado para este filtro.</div>';
+      return;
+    }
+    listEl.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    lista.forEach(r => {
+      const card = document.createElement('div');
+      card.className = 'ajuda-adm-card';
+      card.dataset.id = r.id;
+      const stCls = STATUS_CLS_ADM[r.status] || 'adm-status--pendente';
+      const stTxt = STATUS_LABEL_ADM[r.status] || r.status;
+      card.innerHTML = `
+        <div class="ajuda-adm-head">
+          <span class="ajuda-adm-cat">${CAT_LABEL_ADM[r.categoria] || r.categoria}</span>
+          <span class="adm-status ${stCls}">${stTxt}</span>
+          <span class="ajuda-adm-email">${escHtml(r.user_email || '—')}</span>
+          <span class="ajuda-adm-data">${fmtData(r.criado_em)}</span>
+        </div>
+        <div class="ajuda-adm-titulo">${escHtml(r.titulo)}</div>
+        <div class="ajuda-adm-desc">${escHtml(r.descricao)}</div>
+        ${r.resposta ? `
+          <div class="ajuda-adm-reply-existing">
+            <div class="ajuda-adm-reply-lbl">💬 Sua resposta · ${fmtData(r.respondido_em)}</div>
+            ${escHtml(r.resposta)}
+          </div>` : ''}
+        <div class="ajuda-adm-form">
+          <textarea class="ajuda-adm-textarea" placeholder="${r.resposta ? 'Atualizar resposta…' : 'Escreva uma resposta…'}" rows="3">${r.resposta ? escHtml(r.resposta) : ''}</textarea>
+          <button class="ajuda-adm-btn-reply">Enviar resposta</button>
+        </div>`;
+
+      card.querySelector('.ajuda-adm-btn-reply').addEventListener('click', async function () {
+        const textarea = card.querySelector('.ajuda-adm-textarea');
+        const resposta = textarea.value.trim();
+        if (!resposta) { textarea.focus(); return; }
+        this.disabled = true; this.textContent = 'Enviando…';
+        const { error } = await sb.rpc('admin_responder_ajuda', { p_id: r.id, p_resposta: resposta });
+        if (error) {
+          this.disabled = false; this.textContent = 'Enviar resposta';
+          alert('Erro ao enviar: ' + error.message);
+          return;
+        }
+        r.resposta      = resposta;
+        r.status        = 'respondido';
+        r.respondido_em = new Date().toISOString();
+        const stEl = card.querySelector('.adm-status');
+        if (stEl) { stEl.className = 'adm-status adm-status--respondido'; stEl.textContent = 'Respondido'; }
+        this.textContent = '✅ Enviado!';
+        setTimeout(() => { this.disabled = false; this.textContent = 'Atualizar resposta'; }, 2000);
+      });
+
+      frag.appendChild(card);
+    });
+    listEl.appendChild(frag);
   }
 
   init();

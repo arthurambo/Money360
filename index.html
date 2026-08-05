@@ -23,6 +23,33 @@
 </head>
 <body>
 
+  <!-- ===== TELA DE CARREGAMENTO ===== -->
+  <div id="loading-screen">
+    <div class="loading-logo">
+      <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="56" height="56" rx="16" fill="url(#ll1)"/>
+        <path d="M12 22C12 19.79 13.79 18 16 18H40C42.21 18 44 19.79 44 22V36C44 38.21 42.21 40 40 40H16C13.79 40 12 38.21 12 36V22Z" stroke="white" stroke-width="2.8" fill="none"/>
+        <path d="M12 25H44" stroke="white" stroke-width="2.8"/>
+        <circle cx="37" cy="32" r="2.4" fill="white"/>
+        <defs>
+          <linearGradient id="ll1" x1="0" y1="0" x2="56" y2="56">
+            <stop stop-color="#7C6FF7"/><stop offset="1" stop-color="#2EC4B6"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <span>Money360</span>
+    </div>
+    <div class="loading-bar-wrap">
+      <div class="loading-bar-fill"></div>
+    </div>
+  </div>
+  <script>
+    setTimeout(() => {
+      const el = document.getElementById('loading-screen');
+      if (el) { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 320); }
+    }, 6000);
+  </script>
+
   <!-- ===== TELA DE LOGIN / CADASTRO ===== -->
   <div id="auth-screen" class="auth-screen">
 
@@ -190,6 +217,14 @@
         <svg class="icon-lua" viewBox="0 0 20 20" fill="currentColor"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/></svg>
         <span class="tema-icon">Tema Claro</span>
       </button>
+      <button id="btn-compartilhar" class="btn-tema" aria-label="Compartilhar" title="Compartilhar Money360">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"/></svg>
+        <span>Compartilhar</span>
+      </button>
+      <button id="btn-ajuda" class="btn-tema" aria-label="Ajuda e suporte" title="Ajuda e suporte">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+        <span>Ajuda</span>
+      </button>
     </div>
   </aside>
 
@@ -204,6 +239,12 @@
         <svg viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="8" fill="url(#tl1)"/><path d="M6 11C6 9.895 6.895 9 8 9H20C21.105 9 22 9.895 22 11V18C22 19.105 21.105 20 20 20H8C6.895 20 6 19.105 6 18V11Z" stroke="white" stroke-width="1.4" fill="none"/><path d="M6 12.5H22" stroke="white" stroke-width="1.4"/><circle cx="18.5" cy="16" r="1.2" fill="white"/><defs><linearGradient id="tl1" x1="0" y1="0" x2="28" y2="28"><stop stop-color="#7C6FF7"/><stop offset="1" stop-color="#2EC4B6"/></linearGradient></defs></svg>
         Money360
       </div>
+      <button id="btn-compartilhar-mobile" class="btn-tema-mobile" aria-label="Compartilhar">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"/></svg>
+      </button>
+      <button id="btn-ajuda-mobile" class="btn-tema-mobile" aria-label="Ajuda e suporte">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+      </button>
       <button id="btn-tema-mobile" class="btn-tema-mobile" aria-label="Tema">
         <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"/></svg>
       </button>
@@ -306,13 +347,32 @@
       <!-- VIEW TRANSAÇÕES -->
       <div id="view-transacoes" class="view">
         <div class="page-header"><div><h1 class="page-title">Transações</h1><p class="page-sub">Histórico completo</p></div><button class="btn-primario btn-primario--sm" id="btn-nova-transacao-atalho"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg> Nova Transação</button></div>
-        <div class="filtros"><div class="filtros-row">
-          <div class="filtro-grupo"><label class="campo-label" for="filtro2-inicio">De</label><input type="date" id="filtro2-inicio" class="campo-input campo-input--sm" /></div>
-          <div class="filtro-grupo"><label class="campo-label" for="filtro2-fim">Até</label><input type="date" id="filtro2-fim" class="campo-input campo-input--sm" /></div>
-          <div class="filtro-grupo"><label class="campo-label" for="filtro2-tipo">Tipo</label><select id="filtro2-tipo" class="campo-input campo-input--sm campo-select"><option value="todos">Todos</option><option value="receita">Receitas</option><option value="despesa">Despesas</option></select></div>
-          <div class="filtro-grupo"><label class="campo-label" for="filtro2-categoria">Categoria</label><select id="filtro2-categoria" class="campo-input campo-input--sm campo-select"></select></div>
-          <div class="filtro-btns"><button id="btn-filtrar2" class="btn-secundario"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd"/></svg> Filtrar</button><button id="btn-limpar-filtro2" class="btn-ghost">✕ Limpar</button></div>
-        </div></div>
+        <div class="filtros" style="margin-bottom:24px;">
+          <div class="periodo-rapido">
+            <button class="periodo-btn-tx periodo-btn--ativo" data-dias="0">Todo período</button>
+            <button class="periodo-btn-tx" data-dias="28">28 dias</button>
+            <button class="periodo-btn-tx" data-dias="90">90 dias</button>
+            <button class="periodo-btn-tx" data-dias="365">365 dias</button>
+          </div>
+          <div class="periodo-custom">
+            <span class="periodo-custom-ou">ou</span>
+            <select id="sel-mes-tx" class="periodo-sel">
+              <option value="">Todos os meses</option>
+              <option value="01">Janeiro</option><option value="02">Fevereiro</option>
+              <option value="03">Março</option><option value="04">Abril</option>
+              <option value="05">Maio</option><option value="06">Junho</option>
+              <option value="07">Julho</option><option value="08">Agosto</option>
+              <option value="09">Setembro</option><option value="10">Outubro</option>
+              <option value="11">Novembro</option><option value="12">Dezembro</option>
+            </select>
+            <select id="sel-ano-tx" class="periodo-sel"><option value="">Todos os anos</option></select>
+          </div>
+          <div class="filtros-row">
+            <div class="filtro-grupo"><label class="campo-label" for="filtro2-tipo">Tipo</label><select id="filtro2-tipo" class="campo-input campo-input--sm campo-select"><option value="todos">Todos</option><option value="receita">Receitas</option><option value="despesa">Despesas</option></select></div>
+            <div class="filtro-grupo"><label class="campo-label" for="filtro2-categoria">Categoria</label><select id="filtro2-categoria" class="campo-input campo-input--sm campo-select"></select></div>
+            <div class="filtro-btns"><button id="btn-limpar-filtro2" class="btn-ghost">✕ Limpar</button></div>
+          </div>
+        </div>
         <div class="tabela-wrapper"><div class="tabela-topbar"><h3 class="tabela-titulo">Todas as Transações</h3><span id="contagem2" class="badge-count">0</span></div><table class="tabela" id="tabela-transacoes2"><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Tipo</th><th class="col-valor">Valor</th><th class="col-acoes"></th></tr></thead><tbody id="tabela-body2"></tbody></table><div id="lista-vazia2" class="lista-vazia" style="display:none"><p class="lista-vazia-titulo">Nenhuma transação encontrada</p><small>Adicione no Dashboard.</small></div></div>
       </div>
 
@@ -413,10 +473,9 @@
           <div class="painel-header"><h3 class="painel-titulo">Nova Categoria</h3></div>
           <div class="campo-grupo">
             <label class="campo-label">Tipo</label>
-            <div class="tipo-toggle tipo-toggle--3">
+            <div class="tipo-toggle tipo-toggle--2">
               <button type="button" id="cat-tipo-despesa" class="tipo-btn tipo-btn--despesa ativo">💸 Despesa</button>
               <button type="button" id="cat-tipo-receita" class="tipo-btn tipo-btn--receita">💰 Receita</button>
-              <button type="button" id="cat-tipo-assinatura" class="tipo-btn tipo-btn--assinatura">🔄 Assinatura</button>
             </div>
           </div>
           <div class="cat-form">
@@ -437,10 +496,6 @@
           <div id="cat-lista-despesa" class="cat-lista"></div>
         </div>
 
-        <div class="painel">
-          <div class="painel-header"><h3 class="painel-titulo">🔄 Categorias de Assinatura</h3><span class="badge-count" id="cat-count-assinatura">0</span></div>
-          <div id="cat-lista-assinatura" class="cat-lista"></div>
-        </div>
       </div>
 
       <!-- VIEW CONFIGURAÇÕES -->
@@ -643,6 +698,51 @@
 
   <div id="toast" class="toast"></div>
 
+  <!-- ── Modal de compartilhamento ── -->
+  <div id="modal-compartilhar" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="share-titulo">
+    <div class="modal-box modal-box--share">
+      <div class="modal-edit-header">
+        <h4 id="share-titulo" class="modal-titulo">Compartilhar Money360</h4>
+        <button id="share-fechar" class="btn-fechar-modal"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button>
+      </div>
+      <div class="share-preview">
+        <p>Seu dinheiro desescondido! 💸 Lembrei de você porque finalmente achei um app de finanças que não parece uma planilha chata da faculdade.<br><br>O Money360 organiza todas as suas contas, te avisa antes dos boletos vencerem e funciona direto no celular ou PC.</p>
+      </div>
+      <div class="share-opts">
+        <button class="share-opt" id="share-whatsapp">
+          <span class="share-opt-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          </span>
+          <div class="share-opt-info"><strong>WhatsApp</strong><span>Enviar mensagem pronta</span></div>
+        </button>
+        <button class="share-opt" id="share-copy">
+          <span class="share-opt-icon">🔗</span>
+          <div class="share-opt-info"><strong>Copiar link</strong><span>Cole onde quiser</span></div>
+        </button>
+        <button class="share-opt" id="share-native" style="display:none">
+          <span class="share-opt-icon">📤</span>
+          <div class="share-opt-info"><strong>Compartilhar com…</strong><span>Mais opções do dispositivo</span></div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal de ajuda ── -->
+  <div id="modal-ajuda" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="ajuda-modal-titulo">
+    <div class="modal-box modal-box--edit modal-box--ajuda">
+      <div class="modal-edit-header">
+        <button id="ajuda-voltar" class="btn-ghost" style="display:none;padding:6px 12px;font-size:.8rem">← Voltar</button>
+        <h4 id="ajuda-modal-titulo" class="modal-titulo">Como podemos ajudar?</h4>
+        <button id="ajuda-fechar" class="btn-fechar-modal"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button>
+      </div>
+      <div class="modal-box-body" style="padding:0 24px 24px;overflow-y:auto;flex:1">
+        <div id="ajuda-cats" class="ajuda-cats-grid"></div>
+        <div id="ajuda-relatos" style="display:none" class="ajuda-relatos-lista"></div>
+        <div id="ajuda-form"    style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
   <script src="categories.js"></script>
   <script src="auth.js"></script>
   <script src="notification.js"></script>
@@ -650,6 +750,8 @@
   <script src="script.js"></script>
   <script src="eventos.js"></script>
   <script src="ui.js"></script>
+  <script src="share.js"></script>
+  <script src="help.js"></script>
 
   <!-- PWA: registra o service worker -->
   <script>

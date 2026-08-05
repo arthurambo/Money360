@@ -35,7 +35,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window._mostrarToast) window._mostrarToast(msg);
   }
 
+  function esconderLoading() {
+    const el = document.getElementById('loading-screen');
+    if (!el) return;
+    el.classList.add('loading--done');
+    setTimeout(() => {
+      el.classList.add('loading--out');
+      setTimeout(() => el.remove(), 320);
+    }, 180);
+  }
+
   function mostrarApp() {
+    esconderLoading();
     authScreen.style.display = 'none';
     appScreen.style.display  = '';
     setTimeout(() => window._notif?.verificar(), 1500);
@@ -44,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function mostrarAuth() {
+    esconderLoading();
     appScreen.style.display  = 'none';
     authScreen.style.display = '';
   }
@@ -116,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const ADMIN_EMAILS = ['ambrosio.arthur@gmail.com'];
+  const ADMIN_EMAILS = ['ambrosio.arthur@gmail.com', 'dracoforgegm@gmail.com'];
 
   function aplicarSessao(session) {
     const email = session?.user?.email || session?.user?.user_metadata?.email || '';
