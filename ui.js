@@ -557,6 +557,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const COR_CAT_RENDA = { salario:'#30D988', freelance:'#5B9CF6', investimento:'#7C6FF7', outros_receita:'#94a3b8' };
   const PALETA_COR_RENDA = ['#30D988','#5B9CF6','#7C6FF7','#2EC4B6','#FFC542','#34d399','#a78bfa','#22d3ee','#fb923c','#f472b6'];
 
+  // diasMes = turnos de trabalho por mês em ciclo de 30 dias
+  const ESCALA_CONFIG = {
+    '5x2':          { label: '5×2',    diasMes: 30 * 5/7,    horasTurnoDefault: 8  },
+    '6x1':          { label: '6×1',    diasMes: 30 * 6/7,    horasTurnoDefault: 8  },
+    '12x36':        { label: '12×36',  diasMes: 720 / 48,    horasTurnoDefault: 12 },
+    '24x48':        { label: '24×48',  diasMes: 720 / 72,    horasTurnoDefault: 24 },
+    'personalizada':{ label: 'Custom', diasMes: null,         horasTurnoDefault: 8  },
+  };
+
+  function calcHorasMesTrabalhador(renda) {
+    const cfg      = ESCALA_CONFIG[renda.escala] || ESCALA_CONFIG['5x2'];
+    const diasMes  = renda.escala === 'personalizada' ? (renda.diasMesPersonalizado || 0) : cfg.diasMes;
+    const horasTurno = renda.horasTurno || cfg.horasTurnoDefault;
+    return diasMes * horasTurno;
+  }
+
+  function calcRendaHora(renda) {
+    if (renda.perfil === 'vendedor') {
+      const sess = renda.sessoes || [];
+      const totalGanho = sess.reduce((a, s) => a + (s.ganho || 0), 0);
+      const totalHoras = sess.reduce((a, s) => a + (s.horas || 0), 0);
+      return totalHoras > 0 ? totalGanho / totalHoras : 0;
+    }
+    const hMes = calcHorasMesTrabalhador(renda);
+    return hMes > 0 ? (renda.valor || 0) / hMes : 0;
+  }
+
+  function fmtHora(v) {
+    if (!v) return '—';
+    return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '/h';
+  }
+
   function catRendaInfo(id) {
     const cm = window._catsMgr?.getCatMap() || {};
     return cm[id] || cm['outros_receita'] || { emoji: '💰', nome: 'Outros' };
@@ -584,6 +616,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const el1 = q('renda-total-mensal'); if (el1) el1.textContent = moeda(totalMensal);
     const el2 = q('renda-total-anual');  if (el2) el2.textContent = moeda(totalMensal*12);
     const el3 = q('renda-total-qtd');    if (el3) el3.textContent = lista.length;
+    // Média ponderada de ganho/hora entre todas as fontes com valor calculado
+    const horasTotal = lista.reduce((a, r) => {
+      if (r.perfil === 'vendedor') return a + (r.sessoes || []).reduce((b, s) => b + (s.horas || 0), 0);
+      return a + calcHorasMesTrabalhador(r);
+    }, 0);
+    const elH = q('renda-media-hora');
+    if (elH) elH.textContent = horasTotal > 0 ? fmtHora(totalMensal / horasTotal) : '—';
 
     if (badge) { badge.textContent = lista.length||''; badge.style.display = lista.length ? '' : 'none'; }
 
@@ -600,35 +639,75 @@ document.addEventListener('DOMContentLoaded', () => {
       const cor  = corCatRenda(s.categoria);
       const card = document.createElement('div');
       card.className = 'ass-card';
+      const rendaHora = calcRendaHora(s);
+      const esVendedor = s.perfil === 'vendedor';
+      const totalSessHoras = (s.sessoes||[]).reduce((a,x)=>a+(x.horas||0),0);
+      const totalSessGanho = (s.sessoes||[]).reduce((a,x)=>a+(x.ganho||0),0);
+      const cfg = ESCALA_CONFIG[s.escala] || ESCALA_CONFIG['5x2'];
+      const escalaLabel = s.escala && !esVendedor
+        ? `${cfg.label} · ${s.horasTurno||cfg.horasTurnoDefault}h/turno`
+        : '';
       card.innerHTML = `
         <div class="ass-card-accent" style="background:${cor}"></div>
         <div class="ass-card-body">
           <div class="ass-card-top">
             <div class="ass-card-icon" style="background:${cor}22;color:${cor}">${info.emoji}</div>
             <div class="ass-card-acoes">
+              ${esVendedor ? `<button class="btn-secundario renda-btn-sessoes" title="Registrar dia" style="font-size:12px;padding:4px 10px">📅 Registrar dia</button>` : ''}
               <button class="btn-editar renda-btn-edit" title="Editar"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg></button>
               <button class="btn-excluir renda-btn-del" title="Remover">×</button>
             </div>
           </div>
           <h4 class="ass-card-nome">${esc(s.nome)}</h4>
-          <span class="ass-card-cat">${info.nome}</span>
+          <span class="ass-card-cat">${info.nome}${escalaLabel ? ` · <span class="renda-escala-badge">${escalaLabel}</span>` : ''}</span>
           <div class="ass-card-valores">
-            <div><p class="ass-val-label">Por mês</p><p class="ass-val-num">${moeda(s.valor)}</p></div>
-            <div><p class="ass-val-label">Por ano</p><p class="ass-val-num">${moeda(s.valor*12)}</p></div>
+            ${s.valor ? `<div><p class="ass-val-label">Por mês</p><p class="ass-val-num">${moeda(s.valor)}</p></div>` : ''}
+            ${s.valor ? `<div><p class="ass-val-label">Por ano</p><p class="ass-val-num">${moeda(s.valor*12)}</p></div>` : ''}
+            ${esVendedor && totalSessHoras > 0 ? `<div><p class="ass-val-label">Horas totais</p><p class="ass-val-num">${totalSessHoras.toLocaleString('pt-BR', {maximumFractionDigits:1})}h</p></div>` : ''}
+            ${esVendedor && totalSessGanho > 0 ? `<div><p class="ass-val-label">Ganho total</p><p class="ass-val-num">${moeda(totalSessGanho)}</p></div>` : ''}
+            ${rendaHora > 0 ? `<div class="renda-hora-destaque"><p class="ass-val-label">Ganho por hora</p><p class="ass-val-num renda-hora-val">${fmtHora(rendaHora)}</p></div>` : ''}
             ${s.diaRecebimento ? `<div><p class="ass-val-label">Recebe dia</p><p class="ass-val-num">${s.diaRecebimento}</p></div>` : ''}
           </div>
-          ${s.recebimentoAutomatico ? `<div class="ass-card-selos">
-            <span class="ass-selo ass-selo--auto">⚡ Recebimento automático</span>
-          </div>` : ''}
+          ${s.recebimentoAutomatico ? `<div class="ass-card-selos"><span class="ass-selo ass-selo--auto">⚡ Recebimento automático</span></div>` : ''}
           ${s.notas ? `<p class="ass-card-notas">${esc(s.notas)}</p>` : ''}
         </div>`;
       card.querySelector('.renda-btn-edit').addEventListener('click', () => abrirModalRenda(s.id));
       card.querySelector('.renda-btn-del') .addEventListener('click', () => removerRenda(s.id));
+      card.querySelector('.renda-btn-sessoes')?.addEventListener('click', () => abrirSessoesVendedor(s.id));
       grid.appendChild(card);
     });
   }
 
   const modalRenda = q('modal-renda');
+
+  function selRendaPerfil(perfil) {
+    const isTrab = perfil !== 'vendedor';
+    q('renda-campos-trabalhador').style.display  = isTrab ? '' : 'none';
+    q('renda-campos-vendedor').style.display     = isTrab ? 'none' : '';
+    q('renda-perfil-trabalhador').classList.toggle('ativo', isTrab);
+    q('renda-perfil-vendedor').classList.toggle('ativo', !isTrab);
+    // Campos que não fazem sentido para vendedor
+    if (q('renda-campo-valor-dia'))   q('renda-campo-valor-dia').style.display   = isTrab ? '' : 'none';
+    if (q('renda-campo-recebimento')) q('renda-campo-recebimento').style.display = isTrab ? '' : 'none';
+    atualizarPreviewHora();
+  }
+
+  function atualizarPreviewHora() {
+    const escala = q('renda-escala')?.value || '5x2';
+    const cfg    = ESCALA_CONFIG[escala] || ESCALA_CONFIG['5x2'];
+    const horas  = parseFloat(q('renda-horas-turno')?.value || cfg.horasTurnoDefault);
+    const dias   = escala === 'personalizada'
+      ? parseFloat(q('renda-dias-mes')?.value || 0)
+      : cfg.diasMes;
+    const valor  = parseFloat(q('renda-valor')?.value || 0);
+    const el     = q('renda-preview-hora');
+    if (!el) return;
+    if (q('renda-perfil-vendedor')?.classList.contains('ativo')) { el.textContent = ''; return; }
+    const hMes   = dias * horas;
+    el.textContent = hMes > 0 && valor > 0
+      ? `≈ ${fmtHora(valor / hMes)} com base nos dados acima`
+      : '';
+  }
 
   function abrirModalRenda(id) {
     const titulo = q('renda-modal-titulo');
@@ -641,11 +720,26 @@ document.addEventListener('DOMContentLoaded', () => {
       if (titulo)              titulo.textContent = 'Editar Fonte de Renda';
       if (q('renda-edit-id'))  q('renda-edit-id').value = r.id;
       if (q('renda-nome'))     q('renda-nome').value     = r.nome;
-      if (q('renda-valor'))    q('renda-valor').value    = r.valor;
+      if (q('renda-valor'))    q('renda-valor').value    = r.valor||'';
       if (q('renda-dia'))      q('renda-dia').value      = r.diaRecebimento||'';
       window._catsMgr?.populateSelectByTipo('renda-categoria', 'receita', r.categoria);
       if (q('renda-recebimento-automatico')) q('renda-recebimento-automatico').checked = !!r.recebimentoAutomatico;
       if (q('renda-notas'))    q('renda-notas').value    = r.notas||'';
+      const perfil = r.perfil || 'trabalhador';
+      selRendaPerfil(perfil);
+      if (perfil === 'trabalhador') {
+        const escala = r.escala || '5x2';
+        if (q('renda-escala'))      q('renda-escala').value      = escala;
+        const cfg = ESCALA_CONFIG[escala] || ESCALA_CONFIG['5x2'];
+        if (q('renda-horas-turno')) q('renda-horas-turno').value = r.horasTurno || cfg.horasTurnoDefault;
+        if (escala === 'personalizada') {
+          q('renda-escala-pers').style.display = '';
+          if (q('renda-dias-mes')) q('renda-dias-mes').value = r.diasMesPersonalizado||'';
+        } else {
+          q('renda-escala-pers').style.display = 'none';
+        }
+        atualizarPreviewHora();
+      }
     } else {
       if (titulo) titulo.textContent = 'Nova Fonte de Renda';
       if (q('renda-edit-id'))  q('renda-edit-id').value = '';
@@ -656,33 +750,51 @@ document.addEventListener('DOMContentLoaded', () => {
       window._catsMgr?.populateSelectByTipo('renda-categoria', 'receita', primeiraRenda);
       if (q('renda-recebimento-automatico')) q('renda-recebimento-automatico').checked = false;
       if (q('renda-notas'))    q('renda-notas').value    = '';
+      selRendaPerfil('trabalhador');
+      if (q('renda-escala'))      q('renda-escala').value      = '5x2';
+      if (q('renda-horas-turno')) q('renda-horas-turno').value = 8;
+      q('renda-escala-pers').style.display = 'none';
+      atualizarPreviewHora();
     }
     abrirModal(modalRenda);
     q('renda-nome')?.focus();
   }
 
   function salvarRenda() {
-    const id   = q('renda-edit-id')?.value    || '';
-    const nome = q('renda-nome')?.value.trim()|| '';
-    const vStr = q('renda-valor')?.value      || '';
-    const dia  = q('renda-dia')?.value        || '';
-    const cat  = q('renda-categoria')?.value  || 'outros_receita';
-    const nota = q('renda-notas')?.value.trim()|| '';
+    const id    = q('renda-edit-id')?.value    || '';
+    const nome  = q('renda-nome')?.value.trim()|| '';
+    const vStr  = q('renda-valor')?.value      || '';
+    const dia   = q('renda-dia')?.value        || '';
+    const cat   = q('renda-categoria')?.value  || 'outros_receita';
+    const nota  = q('renda-notas')?.value.trim()|| '';
     const recebimentoAutomatico = !!q('renda-recebimento-automatico')?.checked;
-    const errEl= q('renda-msg-erro');
+    const errEl = q('renda-msg-erro');
+    const perfil = q('renda-perfil-vendedor')?.classList.contains('ativo') ? 'vendedor' : 'trabalhador';
 
     function errRenda(msg) { if(errEl){errEl.textContent=msg;errEl.style.display='flex';} }
 
     if (!nome) return errRenda('Informe o nome da fonte.');
-    const v = parseFloat(vStr);
-    if (!vStr||isNaN(v)||v<=0) return errRenda('Informe um valor mensal válido.');
+
+    const v = vStr ? parseFloat(vStr) : 0;
+    if (vStr && (isNaN(v) || v < 0)) return errRenda('Valor mensal inválido.');
+    if (perfil === 'trabalhador' && (!vStr || v <= 0)) return errRenda('Informe um valor mensal válido.');
+
+    const escala = perfil === 'trabalhador' ? (q('renda-escala')?.value || '5x2') : '';
+    const cfg    = ESCALA_CONFIG[escala] || ESCALA_CONFIG['5x2'];
+    const horasTurno = perfil === 'trabalhador'
+      ? (parseFloat(q('renda-horas-turno')?.value) || cfg.horasTurnoDefault) : 0;
+    const diasMesPersonalizado = (perfil === 'trabalhador' && escala === 'personalizada')
+      ? (parseFloat(q('renda-dias-mes')?.value) || 0) : 0;
 
     let lista = getRendas();
+    const base = { nome, valor: v||0, diaRecebimento: dia?+dia:'', categoria: cat, notas: nota,
+                   recebimentoAutomatico, perfil, escala, horasTurno, diasMesPersonalizado };
     if (id) {
       const idx = lista.findIndex(a=>a.id===id);
-      if (idx !== -1) lista[idx] = {...lista[idx], nome, valor:v, diaRecebimento:dia?+dia:'', categoria:cat, notas:nota, recebimentoAutomatico};
+      if (idx !== -1) lista[idx] = {...lista[idx], ...base};
     } else {
-      lista.push({ id: (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2,5)), nome, valor:v, diaRecebimento:dia?+dia:'', categoria:cat, notas:nota, recebimentoAutomatico });
+      lista.push({ id: (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2,5)),
+                   ...base, sessoes: [] });
     }
     saveRendas(lista);
     fecharModal(modalRenda);
@@ -695,6 +807,159 @@ document.addEventListener('DOMContentLoaded', () => {
     saveRendas(lista);
     renderRenda();
     mostrarToast('🗑️ Fonte de renda removida.');
+  }
+
+  /* ── Sessões do vendedor ─────────────────── */
+
+  let _vsessRendaId  = null;
+  let _vsessEditId   = null; // sessão sendo editada (null = modo adicionar)
+  const modalVsess   = q('modal-vendedor-sessoes');
+
+  function _gerarId() {
+    return (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  }
+
+  function _vsessResetForm() {
+    const hoje = new Date().toISOString().split('T')[0];
+    if (q('vsess-data'))  q('vsess-data').value  = hoje;
+    if (q('vsess-ganho')) q('vsess-ganho').value = '';
+    if (q('vsess-horas')) q('vsess-horas').value = '';
+    if (q('vsess-erro'))  q('vsess-erro').style.display = 'none';
+    _vsessEditId = null;
+    const btn = q('vsess-btn-add');
+    if (btn) btn.textContent = 'Adicionar';
+  }
+
+  function abrirSessoesVendedor(rendaId) {
+    _vsessRendaId = rendaId;
+    const renda = getRendas().find(r=>r.id===rendaId);
+    if (!renda) return;
+    q('vsess-titulo').textContent = renda.nome;
+    _vsessResetForm();
+    renderSessoes(renda);
+    abrirModal(modalVsess);
+  }
+
+  function renderSessoes(renda) {
+    const sess = renda.sessoes || [];
+    const lista = q('vsess-lista');
+    const vazio = q('vsess-vazio');
+    const totalGanho = sess.reduce((a,s)=>a+(s.ganho||0),0);
+    const totalHoras = sess.reduce((a,s)=>a+(s.horas||0),0);
+    const mediaHora  = totalHoras > 0 ? totalGanho/totalHoras : 0;
+    q('vsess-total-ganho').textContent = moeda(totalGanho);
+    q('vsess-total-horas').textContent = totalHoras.toLocaleString('pt-BR',{maximumFractionDigits:1})+'h';
+    q('vsess-media-hora').textContent  = mediaHora > 0 ? fmtHora(mediaHora) : '—';
+    if (!lista) return;
+    lista.innerHTML = '';
+    if (!sess.length) { if(vazio) vazio.style.display=''; return; }
+    if (vazio) vazio.style.display = 'none';
+    const sorted = [...sess].sort((a,b)=> (b.data||'').localeCompare(a.data||''));
+    sorted.forEach(s => {
+      const row = document.createElement('div');
+      row.className = 'vsess-row';
+      const dataFmt = s.data ? new Date(s.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+      row.innerHTML = `
+        <span class="vsess-row-data">${dataFmt}</span>
+        <span class="vsess-row-ganho">${moeda(s.ganho||0)}</span>
+        <span class="vsess-row-horas">${(s.horas||0).toLocaleString('pt-BR',{maximumFractionDigits:1})}h</span>
+        <span class="vsess-row-hora">${s.horas > 0 ? fmtHora((s.ganho||0)/s.horas) : '—'}</span>
+        <div class="vsess-row-acoes">
+          <button class="vsess-row-edit btn-editar" title="Editar"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg></button>
+          <button class="vsess-row-del btn-excluir" title="Remover">×</button>
+        </div>`;
+      row.querySelector('.vsess-row-edit').addEventListener('click', () => editarSessao(renda.id, s.id));
+      row.querySelector('.vsess-row-del').addEventListener('click',  () => removerSessao(renda.id, s.id));
+      lista.appendChild(row);
+    });
+  }
+
+  function editarSessao(rendaId, sessaoId) {
+    const renda = getRendas().find(r=>r.id===rendaId);
+    if (!renda) return;
+    const s = (renda.sessoes||[]).find(x=>x.id===sessaoId);
+    if (!s) return;
+    _vsessEditId = sessaoId;
+    if (q('vsess-data'))  q('vsess-data').value  = s.data  || '';
+    if (q('vsess-ganho')) q('vsess-ganho').value = s.ganho || '';
+    if (q('vsess-horas')) q('vsess-horas').value = s.horas || '';
+    if (q('vsess-erro'))  q('vsess-erro').style.display = 'none';
+    const btn = q('vsess-btn-add');
+    if (btn) btn.textContent = 'Salvar edição';
+    q('vsess-data')?.focus();
+  }
+
+  function salvarSessao() {
+    const errEl = q('vsess-erro');
+    const data  = q('vsess-data')?.value  || '';
+    const ganho = parseFloat(q('vsess-ganho')?.value || '');
+    const horas = parseFloat(q('vsess-horas')?.value || '');
+    function errV(m) { if(errEl){errEl.textContent=m;errEl.style.display='flex';} }
+    if (!data)              return errV('Informe a data.');
+    if (isNaN(ganho)||ganho<0) return errV('Informe o valor ganho.');
+    if (isNaN(horas)||horas<=0) return errV('Informe as horas trabalhadas.');
+    if (errEl) errEl.style.display = 'none';
+
+    const lista = getRendas();
+    const idx   = lista.findIndex(r=>r.id===_vsessRendaId);
+    if (idx === -1) return;
+    if (!lista[idx].sessoes) lista[idx].sessoes = [];
+    const renda = lista[idx];
+
+    if (_vsessEditId) {
+      // Editar sessão existente
+      const sIdx = renda.sessoes.findIndex(s=>s.id===_vsessEditId);
+      if (sIdx !== -1) {
+        const old = renda.sessoes[sIdx];
+        renda.sessoes[sIdx] = {...old, data, ganho, horas};
+        // Atualiza transação vinculada se existir
+        if (old.txId) {
+          const txs = getTransacoes();
+          const tIdx = txs.findIndex(t=>t.id===old.txId);
+          if (tIdx !== -1) {
+            txs[tIdx] = {...txs[tIdx], descricao: renda.nome, valor: ganho, data, categoria: renda.categoria||'outros_receita'};
+            localStorage.setItem('carteira_transacoes', JSON.stringify(txs));
+            window._recarregarTransacoes?.();
+          }
+        }
+      }
+      mostrarToast('✏️ Venda atualizada!');
+    } else {
+      // Nova sessão
+      const txId = _gerarId();
+      renda.sessoes.push({ id: _gerarId(), data, ganho, horas, txId });
+      // Lança transação
+      const txs = getTransacoes();
+      txs.push({ id: txId, tipo: 'receita', descricao: renda.nome, valor: ganho, data, categoria: renda.categoria||'outros_receita' });
+      localStorage.setItem('carteira_transacoes', JSON.stringify(txs));
+      window._recarregarTransacoes?.();
+      mostrarToast('✅ Dia registrado!');
+    }
+
+    saveRendas(lista);
+    _vsessResetForm();
+    renderSessoes(lista[idx]);
+    renderRenda();
+  }
+
+  function removerSessao(rendaId, sessaoId) {
+    const lista = getRendas();
+    const idx   = lista.findIndex(r=>r.id===rendaId);
+    if (idx === -1) return;
+    const sess = lista[idx].sessoes || [];
+    const s    = sess.find(x=>x.id===sessaoId);
+    // Remove transação vinculada
+    if (s?.txId) {
+      const txs = getTransacoes().filter(t=>t.id!==s.txId);
+      localStorage.setItem('carteira_transacoes', JSON.stringify(txs));
+      window._recarregarTransacoes?.();
+    }
+    lista[idx].sessoes = sess.filter(x=>x.id!==sessaoId);
+    saveRendas(lista);
+    if (_vsessEditId === sessaoId) _vsessResetForm();
+    renderSessoes(lista[idx]);
+    renderRenda();
+    mostrarToast('🗑️ Dia removido.');
   }
 
   /* ── Recebimento automático ──────────────────── */
@@ -736,6 +1001,41 @@ document.addEventListener('DOMContentLoaded', () => {
   q('renda-modal-cancelar')?.addEventListener('click', () => fecharModal(modalRenda));
   q('renda-modal-fechar')  ?.addEventListener('click', () => fecharModal(modalRenda));
   modalRenda?.addEventListener('click', e => { if(e.target===modalRenda) fecharModal(modalRenda); });
+
+  q('renda-perfil-trabalhador')?.addEventListener('click', () => selRendaPerfil('trabalhador'));
+  q('renda-perfil-vendedor')   ?.addEventListener('click', () => selRendaPerfil('vendedor'));
+
+  q('renda-escala')?.addEventListener('change', () => {
+    const escala = q('renda-escala').value;
+    const cfg    = ESCALA_CONFIG[escala] || ESCALA_CONFIG['5x2'];
+    q('renda-escala-pers').style.display = escala === 'personalizada' ? '' : 'none';
+    if (q('renda-horas-turno') && !q('renda-horas-turno').value) {
+      q('renda-horas-turno').value = cfg.horasTurnoDefault;
+    } else if (q('renda-horas-turno')) {
+      q('renda-horas-turno').value = cfg.horasTurnoDefault;
+    }
+    atualizarPreviewHora();
+  });
+  q('renda-horas-turno')?.addEventListener('input', atualizarPreviewHora);
+  q('renda-dias-mes')   ?.addEventListener('input', atualizarPreviewHora);
+  q('renda-valor')      ?.addEventListener('input', atualizarPreviewHora);
+
+  q('vsess-btn-add')?.addEventListener('click', salvarSessao);
+  q('vsess-fechar') ?.addEventListener('click', () => fecharModal(modalVsess));
+  modalVsess?.addEventListener('click', e => { if(e.target===modalVsess) fecharModal(modalVsess); });
+
+  /* ── Patch notes (exibe uma única vez) ── */
+  const PATCH_KEY      = 'money360_patch_renda_update';
+  const modalPatch     = q('modal-patch-notes');
+  if (modalPatch && !localStorage.getItem(PATCH_KEY)) {
+    setTimeout(() => abrirModal(modalPatch), 600);
+  }
+  function fecharPatch() {
+    localStorage.setItem(PATCH_KEY, '1');
+    fecharModal(modalPatch);
+  }
+  q('patch-btn-fechar')?.addEventListener('click', fecharPatch);
+  modalPatch?.addEventListener('click', e => { if (e.target === modalPatch) fecharPatch(); });
 
   /* ══════════════════════════════════════════
      RELATÓRIOS

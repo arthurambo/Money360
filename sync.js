@@ -119,11 +119,16 @@
     }
     if (upsert.length) {
       await sb.from('rendas').upsert(upsert.map(r => ({
-        id: r.id, user_id: userId, nome: r.nome, valor: r.valor,
+        id: r.id, user_id: userId, nome: r.nome, valor: r.valor || 0,
         dia_recebimento: r.diaRecebimento ? Number(r.diaRecebimento) : null,
         categoria: r.categoria || 'outros_receita', notas: r.notas || null,
         recebimento_automatico: !!r.recebimentoAutomatico,
         ultimo_recebimento_automatico: r.ultimoRecebimentoAutomatico || null,
+        perfil: r.perfil || 'trabalhador',
+        escala: r.escala || null,
+        horas_turno: r.horasTurno || null,
+        dias_mes_pers: r.diasMesPersonalizado || null,
+        sessoes: r.sessoes || [],
       })));
     }
   }
@@ -189,6 +194,11 @@
         diaRecebimento: r.dia_recebimento || '', categoria: r.categoria, notas: r.notas || '',
         recebimentoAutomatico: !!r.recebimento_automatico,
         ultimoRecebimentoAutomatico: r.ultimo_recebimento_automatico || '',
+        perfil: r.perfil || 'trabalhador',
+        escala: r.escala || '',
+        horasTurno: r.horas_turno || 0,
+        diasMesPersonalizado: r.dias_mes_pers || 0,
+        sessoes: Array.isArray(r.sessoes) ? r.sessoes : [],
       }));
       let catArr = (cat || []).map(r => ({
         id: r.id, emoji: r.emoji, nome: r.nome, tipo: r.tipo, isDefault: !!r.is_default,
