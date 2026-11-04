@@ -1053,6 +1053,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (q('vsess-data'))  q('vsess-data').value  = hoje;
     if (q('vsess-ganho')) q('vsess-ganho').value = '';
     if (q('vsess-horas')) q('vsess-horas').value = '';
+    if (q('vsess-nome'))  q('vsess-nome').value  = '';
     if (q('vsess-erro'))  q('vsess-erro').style.display = 'none';
     _vsessEditId = null;
     const btn = q('vsess-btn-add');
@@ -1132,8 +1133,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Toggle form fields
     const campoHoras    = q('vsess-campo-horas');
     const campoCliente  = q('vsess-campo-cliente');
+    const campoNome     = q('vsess-campo-nome');
     if (campoHoras)   campoHoras.style.display   = emp ? 'none' : '';
     if (campoCliente) campoCliente.style.display = emp ? ''     : 'none';
+    if (campoNome)    campoNome.style.display    = emp ? ''     : 'none';
     if (!lista) return;
     lista.innerHTML = '';
     if (!sess.length) { if(vazio) vazio.style.display=''; return; }
@@ -1150,6 +1153,7 @@ document.addEventListener('DOMContentLoaded', () => {
         row.innerHTML = `
           <span class="vsess-row-data">${dataFmt}</span>
           <span class="vsess-row-ganho">${moeda(s.ganho||0)}</span>
+          ${s.nome ? `<span class="vsess-row-nome">${esc(s.nome)}</span>` : ''}
           <span class="vsess-row-cliente">${esc(clienteNome)}</span>
           <div class="vsess-row-acoes">
             <button class="vsess-row-edit btn-editar" title="Editar"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg></button>
@@ -1181,6 +1185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (q('vsess-data'))    q('vsess-data').value    = s.data    || '';
     if (q('vsess-ganho'))   q('vsess-ganho').value   = s.ganho   || '';
     if (q('vsess-horas'))   q('vsess-horas').value   = s.horas   || '';
+    if (q('vsess-nome'))    q('vsess-nome').value    = s.nome    || '';
     if (q('vsess-cliente')) q('vsess-cliente').value = s.cliente || '';
     if (q('vsess-erro'))    q('vsess-erro').style.display = 'none';
     const btn = q('vsess-btn-add');
@@ -1195,6 +1200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ganho  = parseFloat(q('vsess-ganho')?.value || '');
     const horas  = emp ? 0 : parseFloat(q('vsess-horas')?.value || '');
     const cliente = emp ? (q('vsess-cliente')?.value || '') : '';
+    const nome    = emp ? (q('vsess-nome')?.value.trim() || '') : '';
     function errV(m) { if(errEl){errEl.textContent=m;errEl.style.display='flex';} }
     if (!data)                 return errV('Informe a data.');
     if (isNaN(ganho)||ganho<0) return errV('Informe o valor ganho.');
@@ -1212,13 +1218,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const sIdx = renda.sessoes.findIndex(s=>s.id===_vsessEditId);
       if (sIdx !== -1) {
         const old = renda.sessoes[sIdx];
-        renda.sessoes[sIdx] = {...old, data, ganho, horas, ...(emp ? {cliente} : {})};
+        renda.sessoes[sIdx] = {...old, data, ganho, horas, ...(emp ? {cliente, ...(nome ? {nome} : {})} : {})};
         // Atualiza transação vinculada se existir
         if (old.txId) {
           const txs = getTransacoes();
           const tIdx = txs.findIndex(t=>t.id===old.txId);
           if (tIdx !== -1) {
-            txs[tIdx] = {...txs[tIdx], descricao: renda.nome, valor: ganho, data, categoria: renda.categoria||'outros_receita', ...(emp && cliente ? {cliente} : {})};
+            const descricao = (emp && nome) ? nome : renda.nome;
+            txs[tIdx] = {...txs[tIdx], descricao, valor: ganho, data, categoria: renda.categoria||'outros_receita', ...(emp && cliente ? {cliente} : {})};
             localStorage.setItem('carteira_transacoes', JSON.stringify(txs));
             window._recarregarTransacoes?.();
           }
@@ -1228,10 +1235,11 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       // Nova sessão
       const txId = _gerarId();
-      renda.sessoes.push({ id: _gerarId(), data, ganho, horas, txId, ...(emp && cliente ? {cliente} : {}) });
+      renda.sessoes.push({ id: _gerarId(), data, ganho, horas, txId, ...(emp ? {cliente, ...(nome ? {nome} : {})} : {}) });
       // Lança transação
       const txs = getTransacoes();
-      txs.push({ id: txId, tipo: 'receita', descricao: renda.nome, valor: ganho, data, categoria: renda.categoria||'outros_receita', ...(emp && cliente ? {cliente} : {}) });
+      const descricao = (emp && nome) ? nome : renda.nome;
+      txs.push({ id: txId, tipo: 'receita', descricao, valor: ganho, data, categoria: renda.categoria||'outros_receita', ...(emp && cliente ? {cliente} : {}) });
       localStorage.setItem('carteira_transacoes', JSON.stringify(txs));
       window._recarregarTransacoes?.();
       mostrarToast(emp ? '✅ Venda registrada!' : '✅ Dia registrado!');

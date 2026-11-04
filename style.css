@@ -573,6 +573,7 @@ html.claro .auth-screen::before,html.claro .auth-screen::after{opacity:.18;}
 
 /* ── Sessões: empresa mode ── */
 .vsess-row-cliente{color:var(--text-secondary);font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.vsess-row-nome{color:var(--text-primary);font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 /* ── Gráfico histórico: botões de modo ── */
 .historico-modos{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--border-color)}
