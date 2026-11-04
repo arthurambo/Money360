@@ -220,7 +220,14 @@
       if (!txArr.length && localTx.length)       txArr    = corrigirIds(localTx);
       if (!assArr.length && localAss.length)     assArr   = corrigirIds(localAss);
       if (!rendaArr.length && localRenda.length) rendaArr = corrigirIds(localRenda);
-      if (!catArr.length && localCat.length)     catArr   = localCat;
+      if (!catArr.length && localCat.length) {
+        catArr = localCat;
+      } else if (catArr.length && localCat.length) {
+        // Mescla categorias locais que não estão no banco (ex.: clientes adicionados offline)
+        const idsNoSupabase = new Set(catArr.map(c => c.id));
+        const extras = localCat.filter(c => !idsNoSupabase.has(c.id));
+        if (extras.length) catArr = [...catArr, ...extras];
+      }
 
       origSetItem(TX_KEY, JSON.stringify(txArr));
       origSetItem(ASS_KEY, JSON.stringify(assArr));

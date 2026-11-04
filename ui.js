@@ -16,6 +16,13 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ── Helpers ── */
   const q  = id => document.getElementById(id);
   window._isModoEmpresa = () => localStorage.getItem('carteira_modo_empresa') === '1';
+
+  // Aplica estado do modo empresa nas categorias logo no startup
+  setTimeout(() => {
+    window._catsMgr?.renderCatPanel?.();
+    window._catsMgr?.populateCatSelects?.();
+  }, 0);
+
   const abrirModal  = el => el && el.classList.add('modal--aberto');
   const fecharModal = el => el && el.classList.remove('modal--aberto');
 
