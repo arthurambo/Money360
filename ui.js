@@ -640,10 +640,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const lista = getAssinaturas();
     const idx = lista.findIndex(a=>a.id===assId);
     if (idx === -1) return;
-    const entradas = lista[idx].entradas || [];
-    entradas.push({ id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36), valor: v, data });
-    lista[idx] = {...lista[idx], entradas};
+    const ass = lista[idx];
+    const txId = _gerarId();
+    const entradas = ass.entradas || [];
+    entradas.push({ id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36), valor: v, data, txId });
+    lista[idx] = {...ass, entradas};
     saveAssinaturas(lista);
+    // Lança transação de despesa vinculada
+    const txs = getTransacoes();
+    txs.push({ id: txId, tipo: 'despesa', descricao: ass.nome, valor: v, data, categoria: ass.categoria || 'outros' });
+    localStorage.setItem('carteira_transacoes', JSON.stringify(txs));
+    window._recarregarTransacoes?.();
     _assVarResetForm();
     renderAssVarEntradas(lista[idx]);
     renderAssinaturas();
@@ -654,8 +661,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const lista = getAssinaturas();
     const idx = lista.findIndex(a=>a.id===assId);
     if (idx === -1) return;
+    const entrada = (lista[idx].entradas || []).find(e=>e.id===entradaId);
     lista[idx] = {...lista[idx], entradas: (lista[idx].entradas || []).filter(e=>e.id!==entradaId)};
     saveAssinaturas(lista);
+    // Remove transação vinculada, se existir
+    if (entrada?.txId) {
+      const txs = getTransacoes().filter(t=>t.id!==entrada.txId);
+      localStorage.setItem('carteira_transacoes', JSON.stringify(txs));
+      window._recarregarTransacoes?.();
+    }
     renderAssVarEntradas(lista[idx]);
     renderAssinaturas();
     mostrarToast('🗑️ Registro removido.');
