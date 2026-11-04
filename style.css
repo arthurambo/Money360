@@ -167,6 +167,7 @@ html.claro input[type="date"]::-webkit-calendar-picker-indicator{filter:none;}
 .tipo-btn--receita.ativo{background:var(--color-success-bg);border-color:var(--color-success-border);color:var(--color-success);box-shadow:0 0 0 1px var(--color-success-border);}
 .tipo-btn--despesa.ativo{background:var(--color-danger-bg);border-color:var(--color-danger-border);color:var(--color-danger);box-shadow:0 0 0 1px var(--color-danger-border);}
 .tipo-btn--assinatura.ativo{background:var(--color-info-bg);border-color:var(--color-info-border);color:var(--color-info);box-shadow:0 0 0 1px var(--color-info-border);}
+.tipo-btn--cliente.ativo{background:rgba(46,196,182,.14);border-color:rgba(46,196,182,.5);color:#1ab8a8;box-shadow:0 0 0 1px rgba(46,196,182,.5);}
 
 /* BOTÕES */
 .btn-primario{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;margin-top:6px;background:var(--brand-grad);color:white;border:none;border-radius:var(--r-md);font-size:.9rem;font-weight:700;letter-spacing:.01em;box-shadow:var(--shadow-glow-violet);transition:opacity var(--t-fast),transform var(--t-fast);}
@@ -288,7 +289,7 @@ html.claro input[type="date"]::-webkit-calendar-picker-indicator{filter:none;}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(6px);}
 .modal-overlay.modal--aberto{display:flex;animation:fade-in .18s var(--ease-out) both;}
 .modal-box{background:var(--surface-raised);border:1px solid var(--border-default);border-radius:var(--r-xl);padding:32px 28px 26px;max-width:380px;width:92%;box-shadow:var(--shadow-lg);animation:modal-pop .25s var(--ease-out) both;text-align:center;}
-.modal-box--edit{max-width:460px;text-align:left;}
+.modal-box--edit{max-width:460px;text-align:left;max-height:92dvh;overflow-y:auto;overflow-x:hidden;}
 .modal-icon-wrap{width:52px;height:52px;background:var(--color-warning-bg);border-radius:50%;display:grid;place-items:center;margin:0 auto 16px;}
 .modal-icon-wrap svg{width:24px;height:24px;color:var(--color-warning);}
 .modal-titulo{font-size:1.05rem;font-weight:700;color:var(--text-primary);margin-bottom:8px;letter-spacing:-.01em;}
@@ -563,12 +564,21 @@ html.claro .auth-screen::before,html.claro .auth-screen::after{opacity:.18;}
   padding:3px 8px;border-radius:100px;background:var(--surface-overlay);color:var(--text-secondary);}
 .ass-selo--auto{background:var(--color-success-bg);color:var(--color-success);}
 
-/* ── Renda: ganho por hora ── */
+/* ── Renda: ganho por hora / faturamento ── */
 .renda-hora-destaque{grid-column:1/-1;}
 .renda-hora-val{color:var(--brand-violet)!important;font-weight:800!important;}
 .renda-escala-badge{font-weight:500;color:var(--text-tertiary);font-size:.7rem;}
 .renda-preview-hora{font-size:.78rem;color:var(--brand-violet);margin:6px 0 0;font-weight:600;}
 .renda-vendedor-nota{font-size:.8rem;color:var(--text-secondary);margin:0 0 8px;line-height:1.5;}
+
+/* ── Sessões: empresa mode ── */
+.vsess-row-cliente{color:var(--text-secondary);font-size:.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ── Gráfico histórico: botões de modo ── */
+.historico-modos{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--border-color)}
+.historico-modo-btn{padding:5px 11px;font-size:.78rem;font-weight:600;background:var(--surface-raised);border:none;color:var(--text-secondary);cursor:pointer;transition:background .15s,color .15s;border-right:1px solid var(--border-color);font-family:inherit}
+.historico-modo-btn:last-child{border-right:none}
+.historico-modo-btn.ativo{background:rgba(102,110,220,.18);color:var(--color-accent,#666edc)}
 
 /* ── Modal patch notes ── */
 .modal-box--patch{max-width:480px;width:100%;padding:0;overflow:hidden;}
@@ -607,10 +617,17 @@ html.claro .auth-screen::before,html.claro .auth-screen::after{opacity:.18;}
 .vsess-row-edit svg{width:13px;height:13px;}
 
 @media(max-width:640px){
-  .vsess-form-row{grid-template-columns:1fr 1fr;row-gap:8px;}
-  .vsess-btn-add{grid-column:1/-1;}
+  .vsess-form-row{display:flex;flex-wrap:wrap;gap:8px;}
+  .vsess-form-row > *{flex:1 1 calc(50% - 4px);min-width:120px;}
+  .vsess-btn-add{flex:1 1 100%;}
   .vsess-row{grid-template-columns:80px 1fr 1fr auto;font-size:.75rem;}
   .vsess-row-hora{display:none;}
+  /* Trabalhador renda form: compact on mobile */
+  #renda-campos-trabalhador .campos-grid{gap:8px;}
+  #renda-campos-trabalhador .campo-grupo{margin-bottom:0;}
+  /* Renda modal: reduce internal padding so it fits on small screens */
+  .modal-box--edit{padding:20px 16px 18px;}
+  #renda-campos-trabalhador{margin-top:4px;}
 }
 
 @media(max-width:640px){

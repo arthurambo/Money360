@@ -73,6 +73,7 @@
       await sb.from('transacoes').upsert(upsert.map(t => ({
         id: t.id, user_id: userId, tipo: t.tipo, descricao: t.descricao,
         valor: t.valor, data: t.data, categoria: t.categoria || 'outros',
+        cliente: t.cliente || null,
       })));
     }
   }
@@ -99,6 +100,8 @@
         parcela: !!a.parcela, data_ultima_parcela: a.dataUltimaParcela || null,
         cobranca_automatica: !!a.cobrancaAutomatica,
         ultima_cobranca_automatica: a.ultimaCobrancaAutomatica || null,
+        tipo: a.tipo || 'fixo',
+        entradas: a.entradas || [],
       })));
     }
   }
@@ -181,6 +184,7 @@
       let txArr = (tx || []).map(r => ({
         id: r.id, tipo: r.tipo, descricao: r.descricao,
         valor: Number(r.valor), data: r.data, categoria: r.categoria,
+        ...(r.cliente ? {cliente: r.cliente} : {}),
       }));
       let assArr = (ass || []).map(r => ({
         id: r.id, nome: r.nome, valor: Number(r.valor),
@@ -188,6 +192,8 @@
         parcela: !!r.parcela, dataUltimaParcela: r.data_ultima_parcela || '',
         cobrancaAutomatica: !!r.cobranca_automatica,
         ultimaCobrancaAutomatica: r.ultima_cobranca_automatica || '',
+        tipo: r.tipo || 'fixo',
+        entradas: Array.isArray(r.entradas) ? r.entradas : [],
       }));
       let rendaArr = (renda || []).map(r => ({
         id: r.id, nome: r.nome, valor: Number(r.valor),

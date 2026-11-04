@@ -309,6 +309,10 @@
                   <div class="input-wrap"><select id="input-categoria" class="campo-input campo-select"></select></div>
                 </div>
               </div>
+              <div id="campo-cliente" class="campo-grupo" style="display:none">
+                <label class="campo-label" for="input-cliente">Cliente</label>
+                <div class="input-wrap"><select id="input-cliente" class="campo-input campo-select"></select></div>
+              </div>
               <button id="btn-adicionar" class="btn-primario"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg> Adicionar Transação</button>
               <p id="msg-erro" class="msg-erro" style="display:none"></p>
             </section>
@@ -367,9 +371,13 @@
             </select>
             <select id="sel-ano-tx" class="periodo-sel"><option value="">Todos os anos</option></select>
           </div>
+          <div class="filtros-row filtros-row--busca" style="margin-bottom:10px">
+            <div class="filtro-grupo" style="flex:1"><label class="campo-label" for="filtro2-busca">Buscar</label><div class="input-wrap"><svg class="input-leading-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg><input type="text" id="filtro2-busca" class="campo-input campo-input--sm has-icon" placeholder="Buscar por descrição…" /></div></div>
+          </div>
           <div class="filtros-row">
             <div class="filtro-grupo"><label class="campo-label" for="filtro2-tipo">Tipo</label><select id="filtro2-tipo" class="campo-input campo-input--sm campo-select"><option value="todos">Todos</option><option value="receita">Receitas</option><option value="despesa">Despesas</option></select></div>
             <div class="filtro-grupo"><label class="campo-label" for="filtro2-categoria">Categoria</label><select id="filtro2-categoria" class="campo-input campo-input--sm campo-select"></select></div>
+            <div class="filtro-grupo" id="filtro2-cliente-grupo" style="display:none"><label class="campo-label" for="filtro2-cliente">Cliente</label><select id="filtro2-cliente" class="campo-input campo-input--sm campo-select"><option value="todos">Todos</option></select></div>
             <div class="filtro-btns"><button id="btn-limpar-filtro2" class="btn-ghost">✕ Limpar</button></div>
           </div>
         </div>
@@ -383,7 +391,7 @@
           <div class="ass-resumo-card"><p class="ass-resumo-label">Total mensal</p><p class="ass-resumo-valor" id="renda-total-mensal">R$ 0,00</p></div>
           <div class="ass-resumo-card"><p class="ass-resumo-label">Total anual</p><p class="ass-resumo-valor" id="renda-total-anual">R$ 0,00</p></div>
           <div class="ass-resumo-card"><p class="ass-resumo-label">Fontes ativas</p><p class="ass-resumo-valor" id="renda-total-qtd">0</p></div>
-          <div class="ass-resumo-card"><p class="ass-resumo-label">Média por hora</p><p class="ass-resumo-valor" id="renda-media-hora">—</p></div>
+          <div class="ass-resumo-card"><p class="ass-resumo-label" id="renda-media-hora-label">Média por hora</p><p class="ass-resumo-valor" id="renda-media-hora">—</p></div>
         </div>
         <div id="renda-grid" class="ass-grid"></div>
         <div id="renda-vazio" class="lista-vazia" style="display:none"><svg class="lista-vazia-svg" viewBox="0 0 100 80" fill="none"><ellipse cx="50" cy="72" rx="32" ry="6" fill="currentColor" opacity=".06"/><rect x="22" y="10" width="56" height="52" rx="8" stroke="currentColor" stroke-width="1.5" fill="none" opacity=".15"/><path d="M34 28h32M34 36h20M34 44h24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".2"/></svg><p class="lista-vazia-titulo">Nenhuma fonte de renda cadastrada</p><small>Adicione as formas como você ganha dinheiro.</small></div>
@@ -460,6 +468,30 @@
             <div id="proj-lista" class="proj-lista"></div>
             <p id="proj-vazio" class="grafico-vazio" style="display:none">Cadastre fontes de renda e gastos mensais para ver a projeção.</p>
           </div>
+          <!-- Empresa mode panels (hidden by default, shown via renderRelatoriosEmpresa) -->
+          <div class="painel painel--full" id="rel-empresa-fat" style="display:none"><div class="painel-header"><h3 class="painel-titulo">🏢 Faturamento por Fonte</h3></div><div id="rel-fat-lista" class="rel-lista-categorias"></div><p id="rel-fat-vazio" class="grafico-vazio" style="display:none">Nenhuma venda registrada.</p></div>
+          <div class="painel" id="rel-empresa-clientes" style="display:none"><div class="painel-header"><h3 class="painel-titulo">👥 Faturamento por Cliente</h3></div><div id="rel-clientes-lista" class="rel-lista-categorias"></div><p id="rel-clientes-vazio" class="grafico-vazio" style="display:none">Sem vendas com cliente.</p></div>
+          <div class="painel painel--full" id="painel-historico">
+            <div class="painel-header" style="flex-wrap:wrap;gap:10px">
+              <h3 class="painel-titulo">📊 Histórico Financeiro</h3>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <div class="historico-modos" id="historico-modos">
+                  <button type="button" class="historico-modo-btn ativo" data-modo="3m">3 Meses</button>
+                  <button type="button" class="historico-modo-btn" data-modo="12m">12 Meses</button>
+                  <button type="button" class="historico-modo-btn" data-modo="ano">Ano</button>
+                </div>
+                <div id="historico-ano-wrap" style="display:none;align-items:center;gap:8px">
+                  <select id="historico-ano-sel" class="campo-input campo-input--sm campo-select" style="width:84px"></select>
+                  <select id="historico-compare-sel" class="campo-input campo-input--sm campo-select" style="width:140px"><option value="">Sem comparação</option></select>
+                </div>
+              </div>
+            </div>
+            <div style="position:relative;width:100%">
+              <canvas id="grafico-historico" width="600" height="200" style="width:100%;height:200px;display:block"></canvas>
+            </div>
+            <div id="historico-legenda" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;justify-content:center;font-size:.8rem;color:var(--text-secondary)"></div>
+            <p id="historico-vazio" class="grafico-vazio" style="display:none">Sem transações no período.</p>
+          </div>
           <div class="painel painel--full"><div class="painel-header"><h3 class="painel-titulo">Balanço por Categoria</h3></div><div id="rel-categorias" class="rel-lista-categorias"></div><p id="rel-vazio" class="grafico-vazio" style="display:none">Sem transações.</p></div>
           <div class="painel"><div class="painel-header"><h3 class="painel-titulo">Despesas por Categoria</h3></div><div class="grafico-wrapper"><canvas id="grafico-pizza2" width="200" height="200"></canvas><div id="grafico-legenda2" class="grafico-legenda"></div></div><p id="grafico-vazio2" class="grafico-vazio" style="display:none">Sem despesas.</p></div>
           <div class="painel"><div class="painel-header"><h3 class="painel-titulo">Estatísticas</h3></div><div id="rel-stats" class="rel-stats"></div></div>
@@ -477,6 +509,7 @@
             <div class="tipo-toggle tipo-toggle--2">
               <button type="button" id="cat-tipo-despesa" class="tipo-btn tipo-btn--despesa ativo">💸 Despesa</button>
               <button type="button" id="cat-tipo-receita" class="tipo-btn tipo-btn--receita">💰 Receita</button>
+              <button type="button" id="cat-tipo-cliente" class="tipo-btn tipo-btn--cliente" style="display:none">👥 Cliente</button>
             </div>
           </div>
           <div class="cat-form">
@@ -495,6 +528,11 @@
         <div class="painel">
           <div class="painel-header"><h3 class="painel-titulo">💸 Categorias de Despesa</h3><span class="badge-count" id="cat-count-despesa">0</span></div>
           <div id="cat-lista-despesa" class="cat-lista"></div>
+        </div>
+
+        <div id="cat-painel-cliente" class="painel" style="display:none">
+          <div class="painel-header"><h3 class="painel-titulo">👥 Categorias de Cliente</h3><span class="badge-count" id="cat-count-cliente">0</span></div>
+          <div id="cat-lista-cliente" class="cat-lista"></div>
         </div>
 
       </div>
@@ -549,6 +587,7 @@
             </div>
           </div>
           <div class="painel"><div class="painel-header"><h3 class="painel-titulo">Aparência</h3></div><div class="config-opcao"><div class="config-opcao-info"><span class="config-opcao-nome">Tema atual</span><span class="config-opcao-desc" id="config-tema-label">Escuro</span></div><button class="btn-secundario" id="btn-tema-config2">Alternar</button></div></div>
+          <div class="painel"><div class="painel-header"><h3 class="painel-titulo">🏢 Modo Empresa</h3></div><div class="config-opcao"><div class="config-opcao-info"><span class="config-opcao-nome">Ativar modo empresa</span><span class="config-opcao-desc">Habilita ferramentas de gestão de negócios: clientes, faturamento e mais</span></div><label class="toggle-switch"><input type="checkbox" id="config-modo-empresa" /><span class="toggle-slider"></span></label></div></div>
           <div class="painel"><div class="painel-header"><h3 class="painel-titulo">Dados</h3></div><div class="config-opcao"><div class="config-opcao-info"><span class="config-opcao-nome">Exportar dados</span><span class="config-opcao-desc">Baixar todos os dados em JSON</span></div><button class="btn-secundario" id="btn-exportar">⬇ Exportar</button></div><div class="config-opcao"><div class="config-opcao-info"><span class="config-opcao-nome">Importar dados</span><span class="config-opcao-desc">Carregar JSON</span></div><label class="btn-secundario" style="cursor:pointer">⬆ Importar<input type="file" id="btn-importar" accept=".json" style="display:none" /></label></div><div class="config-opcao config-opcao--danger"><div class="config-opcao-info"><span class="config-opcao-nome">Apagar tudo</span><span class="config-opcao-desc">Remove transações e categorias criadas</span></div><button class="btn-danger" id="btn-limpar-tudo-config">🗑 Apagar</button></div></div>
           <div class="painel painel--sobre"><div class="painel-header"><h3 class="painel-titulo">Sobre</h3></div><div class="sobre-content"><svg class="sobre-logo" viewBox="0 0 40 40" fill="none"><rect width="40" height="40" rx="12" fill="url(#bg2)"/><path d="M9 15C9 13.343 10.343 12 12 12H28C29.657 12 31 13.343 31 15V26C31 27.657 29.657 29 28 29H12C10.343 29 9 27.657 9 26V15Z" stroke="white" stroke-width="1.8" fill="none"/><path d="M9 17H31" stroke="white" stroke-width="1.8"/><circle cx="26" cy="23" r="1.8" fill="white"/><defs><linearGradient id="bg2" x1="0" y1="0" x2="40" y2="40"><stop stop-color="#7C6FF7"/><stop offset="1" stop-color="#2EC4B6"/></linearGradient></defs></svg><h4 class="sobre-nome">Money360</h4><p class="sobre-versao">Versão: 1.4</p><p class="sobre-desc">Seu dinheiro "desescondido".</p></div></div>
         </div>
@@ -585,6 +624,10 @@
         <div class="campo-grupo"><label class="campo-label" for="edit-data">Data</label><div class="input-wrap"><svg class="input-leading-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg><input type="date" id="edit-data" class="campo-input has-icon" /></div></div>
         <div class="campo-grupo"><label class="campo-label" for="edit-categoria">Categoria</label><div class="input-wrap"><select id="edit-categoria" class="campo-input campo-select"></select></div></div>
       </div>
+      <div id="edit-campo-cliente" class="campo-grupo" style="display:none">
+        <label class="campo-label" for="edit-cliente">Cliente</label>
+        <div class="input-wrap"><select id="edit-cliente" class="campo-input campo-select"></select></div>
+      </div>
       <p id="edit-msg-erro" class="msg-erro" style="display:none"></p>
       <div class="modal-acoes modal-acoes--edit"><button id="edit-cancelar" class="btn-ghost btn-ghost--lg">Cancelar</button><button id="edit-salvar" class="btn-primario" style="margin-top:0;width:auto;padding:10px 24px"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z"/></svg> Salvar Alterações</button></div>
     </div>
@@ -596,14 +639,17 @@
       <div class="modal-edit-header"><h4 id="vsess-titulo" class="modal-titulo">Dias de venda</h4><button id="vsess-fechar" class="btn-fechar-modal"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button></div>
       <div class="vsess-stats">
         <div class="vsess-stat"><span class="vsess-stat-label">Total ganho</span><strong class="vsess-stat-val" id="vsess-total-ganho">R$ 0,00</strong></div>
-        <div class="vsess-stat"><span class="vsess-stat-label">Total horas</span><strong class="vsess-stat-val" id="vsess-total-horas">0h</strong></div>
-        <div class="vsess-stat vsess-stat--destaque"><span class="vsess-stat-label">Média por hora</span><strong class="vsess-stat-val" id="vsess-media-hora">—</strong></div>
+        <div class="vsess-stat" id="vsess-stat-horas"><span class="vsess-stat-label">Total horas</span><strong class="vsess-stat-val" id="vsess-total-horas">0h</strong></div>
+        <div class="vsess-stat vsess-stat--destaque" id="vsess-stat-media"><span class="vsess-stat-label">Média por hora</span><strong class="vsess-stat-val" id="vsess-media-hora">—</strong></div>
+        <div class="vsess-stat" id="vsess-stat-fat-dia" style="display:none"><span class="vsess-stat-label">Fat. médio/dia</span><strong class="vsess-stat-val" id="vsess-fat-dia">—</strong></div>
+        <div class="vsess-stat vsess-stat--destaque" id="vsess-stat-fat-mes" style="display:none"><span class="vsess-stat-label">Fat. médio/mês</span><strong class="vsess-stat-val" id="vsess-fat-mes">—</strong></div>
       </div>
       <div class="vsess-form">
         <div class="vsess-form-row">
           <div class="campo-grupo"><label class="campo-label">Data</label><input type="date" id="vsess-data" class="campo-input campo-input--sm" /></div>
           <div class="campo-grupo"><label class="campo-label">Ganho (R$)</label><input type="number" id="vsess-ganho" class="campo-input campo-input--sm" placeholder="0,00" min="0.01" step="0.01" /></div>
-          <div class="campo-grupo"><label class="campo-label">Horas vendendo</label><input type="number" id="vsess-horas" class="campo-input campo-input--sm" placeholder="Ex: 6" min="0.5" step="0.5" /></div>
+          <div id="vsess-campo-horas" class="campo-grupo"><label class="campo-label">Horas vendendo</label><input type="number" id="vsess-horas" class="campo-input campo-input--sm" placeholder="Ex: 6" min="0.5" step="0.5" /></div>
+          <div id="vsess-campo-cliente" class="campo-grupo" style="display:none"><label class="campo-label">Cliente</label><select id="vsess-cliente" class="campo-input campo-input--sm campo-select"></select></div>
           <button id="vsess-btn-add" class="btn-primario vsess-btn-add">Adicionar</button>
         </div>
         <p id="vsess-erro" class="msg-erro" style="display:none"></p>
@@ -662,13 +708,13 @@
       <input type="hidden" id="renda-edit-id" />
       <div class="campo-grupo"><label class="campo-label" for="renda-nome">Nome da fonte</label><div class="input-wrap"><svg class="input-leading-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg><input type="text" id="renda-nome" class="campo-input has-icon" placeholder="Ex: Salário CLT, Freelance, Aluguel…" maxlength="40" /></div></div>
 
-      <div class="campo-grupo">
+      <div id="renda-campo-perfil"><div class="campo-grupo">
         <label class="campo-label">Perfil de renda <span style="color:var(--c-danger);font-size:11px">*obrigatório</span></label>
         <div class="tipo-toggle tipo-toggle--2">
           <button type="button" id="renda-perfil-trabalhador" class="tipo-btn tipo-btn--receita ativo">👷 Trabalhador</button>
           <button type="button" id="renda-perfil-vendedor"    class="tipo-btn tipo-btn--despesa">🛒 Vendedor</button>
         </div>
-      </div>
+      </div></div>
 
       <div id="renda-campos-trabalhador">
         <div class="campos-grid">
@@ -711,13 +757,21 @@
       <div class="modal-edit-header"><h4 id="ass-modal-titulo" class="modal-titulo">Nova Assinatura</h4><button id="ass-modal-fechar" class="btn-fechar-modal"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button></div>
       <input type="hidden" id="ass-edit-id" />
       <div class="campo-grupo"><label class="campo-label" for="ass-nome">Nome do serviço</label><div class="input-wrap"><svg class="input-leading-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg><input type="text" id="ass-nome" class="campo-input has-icon" placeholder="Ex: Netflix, Spotify, Funcionário…" maxlength="40" /></div></div>
-      <div class="campos-grid">
+      <div id="ass-tipo-wrap" class="campo-grupo" style="display:none">
+        <label class="campo-label">Tipo de gasto recorrente</label>
+        <div class="tipo-toggle tipo-toggle--2">
+          <button type="button" id="ass-tipo-fixo" class="tipo-btn tipo-btn--despesa ativo">💰 Fixo</button>
+          <button type="button" id="ass-tipo-variavel" class="tipo-btn tipo-btn--receita">📊 Variável</button>
+        </div>
+        <p id="ass-tipo-variavel-nota" style="display:none;font-size:.78rem;color:var(--text-secondary);margin:6px 0 0;line-height:1.5">Adicione registros individuais no cartão. A média mensal é calculada automaticamente.</p>
+      </div>
+      <div id="ass-campos-fixo" class="campos-grid">
         <div class="campo-grupo"><label class="campo-label" for="ass-valor">Valor mensal (R$)</label><div class="input-wrap"><span class="input-prefix-label">R$</span><input type="number" id="ass-valor" class="campo-input has-prefix" placeholder="0,00" min="0.01" step="0.01" /></div></div>
         <div class="campo-grupo"><label class="campo-label" for="ass-vencimento">Dia de cobrança</label><div class="input-wrap"><svg class="input-leading-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg><input type="number" id="ass-vencimento" class="campo-input has-icon" placeholder="1 a 31" min="1" max="31" /></div></div>
       </div>
       <div class="campo-grupo"><label class="campo-label" for="ass-categoria">Categoria</label><div class="input-wrap"><select id="ass-categoria" class="campo-input campo-select"></select></div></div>
 
-      <div class="campo-grupo">
+      <div id="ass-grupo-parcela" class="campo-grupo">
         <div class="campo-toggle-row">
           <div class="campo-toggle-info">
             <span class="campo-toggle-nome">📆 É uma parcela?</span>
@@ -731,7 +785,7 @@
         </div>
       </div>
 
-      <div class="campo-grupo">
+      <div id="ass-grupo-cobranca" class="campo-grupo">
         <div class="campo-toggle-row">
           <div class="campo-toggle-info">
             <span class="campo-toggle-nome">⚡ Cobrança automática</span>
@@ -744,6 +798,26 @@
       <div class="campo-grupo"><label class="campo-label" for="ass-notas">Notas (opcional)</label><div class="input-wrap"><input type="text" id="ass-notas" class="campo-input" placeholder="Ex: plano família, 4 usuários…" maxlength="80" /></div></div>
       <p id="ass-msg-erro" class="msg-erro" style="display:none"></p>
       <div class="modal-acoes modal-acoes--edit"><button id="ass-modal-cancelar" class="btn-ghost btn-ghost--lg">Cancelar</button><button id="ass-modal-salvar" class="btn-primario" style="margin-top:0;width:auto;padding:10px 24px"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg> Salvar</button></div>
+    </div>
+  </div>
+
+  <!-- MODAL ASS-VAR (registros de assinatura variável) -->
+  <div id="modal-ass-var" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-box modal-box--edit">
+      <div class="modal-edit-header"><h4 id="ass-var-titulo" class="modal-titulo">Registros</h4><button id="ass-var-fechar" class="btn-fechar-modal"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg></button></div>
+      <input type="hidden" id="ass-var-id" />
+      <div class="ass-resumo-mini" style="background:var(--surface-raised);border-radius:8px;padding:10px 14px;margin-bottom:12px">
+        <span class="campo-label" style="display:block;margin-bottom:2px">Média mensal</span>
+        <strong id="ass-var-media" style="font-size:1.1rem;color:var(--color-danger)">R$ 0,00</strong>
+        <span style="color:var(--text-tertiary);font-size:.8rem"> (de <span id="ass-var-num-meses">0</span> meses)</span>
+      </div>
+      <div id="ass-var-lista" style="max-height:220px;overflow-y:auto;margin-bottom:12px"></div>
+      <div class="campos-grid" style="margin-bottom:8px">
+        <div class="campo-grupo"><label class="campo-label" for="ass-var-valor">Valor (R$)</label><div class="input-wrap"><span class="input-prefix-label">R$</span><input type="number" id="ass-var-valor" class="campo-input has-prefix" placeholder="0,00" min="0.01" step="0.01" /></div></div>
+        <div class="campo-grupo"><label class="campo-label" for="ass-var-data">Data</label><div class="input-wrap"><input type="date" id="ass-var-data" class="campo-input" /></div></div>
+      </div>
+      <p id="ass-var-erro" class="msg-erro" style="display:none"></p>
+      <div class="modal-acoes modal-acoes--edit"><button id="ass-var-cancelar" class="btn-ghost btn-ghost--lg">Fechar</button><button id="ass-var-salvar" class="btn-primario" style="margin-top:0;width:auto;padding:10px 24px">+ Adicionar</button></div>
     </div>
   </div>
 

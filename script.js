@@ -196,7 +196,10 @@ function adicionar() {
   const valor = parseFloat(valorStr);
   if (!valorStr || isNaN(valor) || valor <= 0) return erroForm('Valor inválido.');
   if (!data) return erroForm('Selecione uma data.');
-  transacoes.push({ id: uid(), tipo: tipoSelecionado, descricao, valor, data, categoria });
+  const clienteAdd = document.getElementById('input-cliente')?.value || '';
+  const txAdd = { id: uid(), tipo: tipoSelecionado, descricao, valor, data, categoria };
+  if (clienteAdd) txAdd.cliente = clienteAdd;
+  transacoes.push(txAdd);
   salvar(STORAGE_KEY, transacoes);
   if (inputDescricao) inputDescricao.value = '';
   if (inputValor)     inputValor.value     = '';
@@ -241,6 +244,8 @@ function abrirEdicao(id) {
   if (editVal)  editVal.value  = t.valor;
   if (editDt)   editDt.value   = t.data;
   if (editErro) editErro.style.display = 'none';
+  const editClienteEl = document.getElementById('edit-cliente');
+  if (editClienteEl) editClienteEl.value = t.cliente || '';
   selTipoEdit(t.tipo, t.categoria);
   abrirM(modalEdicao);
   editDesc?.focus();
@@ -257,7 +262,10 @@ function salvarEdicao() {
   if (!vStr || isNaN(valor) || valor <= 0) { showEditErr('Valor inválido.'); return; }
   if (!data) { showEditErr('Selecione uma data.'); return; }
   const idx = transacoes.findIndex(t => t.id === id); if (idx === -1) return;
-  transacoes[idx] = { ...transacoes[idx], tipo: tipoEditando, descricao: desc, valor, data, categoria: cat };
+  const clienteEdit = document.getElementById('edit-cliente')?.value || '';
+  const updTx = { ...transacoes[idx], tipo: tipoEditando, descricao: desc, valor, data, categoria: cat };
+  if (clienteEdit) updTx.cliente = clienteEdit; else delete updTx.cliente;
+  transacoes[idx] = updTx;
   salvar(STORAGE_KEY, transacoes);
   fecharM(modalEdicao);
   toast('✏️ Transação atualizada!');

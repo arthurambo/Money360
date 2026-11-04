@@ -53,7 +53,7 @@
     const result = parsed.map(c => {
       // ids padrão conhecidos: sempre força o tipo correto (corrige dados salvos errados)
       if (forcarCorrecao && TIPO_MIGRACAO[c.id]) return { ...c, tipo: TIPO_MIGRACAO[c.id] };
-      if (c.tipo === 'receita' || c.tipo === 'despesa' || c.tipo === 'assinatura') return c;
+      if (c.tipo === 'receita' || c.tipo === 'despesa' || c.tipo === 'cliente' || c.tipo === 'assinatura') return c;
       return { ...c, tipo: TIPO_MIGRACAO[c.id] || 'despesa' };
     });
 
@@ -66,7 +66,7 @@
     });
 
     // Remove categorias de assinatura (unificadas com despesa a partir da v4)
-    return result.filter(c => c.tipo !== 'assinatura');
+    return result.filter(c => c.tipo !== 'assinatura' && c.tipo !== undefined);
   }
 
   function loadCats() {
@@ -153,9 +153,31 @@
       });
       if (prev && [...fsel.options].some(o => o.value === prev)) fsel.value = prev;
     });
+
+    // Selects de cliente (empresa mode only)
+    const clienteCats = cats.filter(c => c.tipo === 'cliente');
+    const isEmpresa   = window._isModoEmpresa?.() || false;
+    ['input-cliente', 'edit-cliente', 'vsess-cliente'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      const prev = sel.value;
+      sel.innerHTML = '<option value="">Nenhum</option>';
+      clienteCats.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.emoji + ' ' + c.nome;
+        sel.appendChild(opt);
+      });
+      if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+    });
+    const showCliente = isEmpresa && clienteCats.length > 0;
+    ['campo-cliente', 'edit-campo-cliente', 'vsess-campo-cliente'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = showCliente ? '' : 'none';
+    });
   }
 
-  const TIPOS_VALIDOS = ['receita', 'despesa'];
+  const TIPOS_VALIDOS = ['receita', 'despesa', 'cliente'];
 
   /* ── CRUD ─────────────────────────────── */
 
@@ -248,6 +270,20 @@
     const cntR = document.getElementById('cat-count-receita');
     if (cntD) cntD.textContent = despesas.length;
     if (cntR) cntR.textContent = receitas.length;
+
+    // Cliente group (empresa mode only)
+    const isEmpresa = window._isModoEmpresa?.() || false;
+    const clientePainel = document.getElementById('cat-painel-cliente');
+    const clienteBtn    = document.getElementById('cat-tipo-cliente');
+    if (clientePainel) clientePainel.style.display = isEmpresa ? '' : 'none';
+    if (clienteBtn)    clienteBtn.style.display    = isEmpresa ? '' : 'none';
+    if (isEmpresa) {
+      const listCliente = document.getElementById('cat-lista-cliente');
+      const clientes    = cats.filter(c => c.tipo === 'cliente');
+      renderGrupoCat(listCliente, clientes);
+      const cntC = document.getElementById('cat-count-cliente');
+      if (cntC) cntC.textContent = clientes.length;
+    }
   }
 
   /* ── FORM ─────────────────────────────── */
@@ -259,6 +295,7 @@
     tipoFormCat = tipo;
     document.getElementById('cat-tipo-despesa')?.classList.toggle('ativo', tipo === 'despesa');
     document.getElementById('cat-tipo-receita')?.classList.toggle('ativo', tipo === 'receita');
+    document.getElementById('cat-tipo-cliente')?.classList.toggle('ativo', tipo === 'cliente');
   }
 
   function iniciarEdicaoCat(id) {
@@ -325,6 +362,7 @@
     nomeInp?.addEventListener('keydown', e => { if (e.key === 'Enter') salvarCat(); });
     document.getElementById('cat-tipo-despesa')?.addEventListener('click', () => selTipoFormCat('despesa'));
     document.getElementById('cat-tipo-receita')?.addEventListener('click', () => selTipoFormCat('receita'));
+    document.getElementById('cat-tipo-cliente')?.addEventListener('click', () => selTipoFormCat('cliente'));
   }
 
   const ASS_CATS_ANTIGAS = new Set(['streaming','musica','software','cloud','servico-digital','funcionario','internet','seguro','academia','educacao_assinatura','outros_assinatura']);
