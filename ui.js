@@ -605,16 +605,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
     }
-    // Atualizar resumo
+    // Atualizar resumo — média de médias mensais (soma/qtd por mês, depois média entre meses)
     const byMonth = {};
     entradas.forEach(e => {
       const ym = (e.data || '').slice(0, 7); if (!ym) return;
-      byMonth[ym] = (byMonth[ym] || 0) + (e.valor || 0);
+      if (!byMonth[ym]) byMonth[ym] = { soma: 0, qtd: 0 };
+      byMonth[ym].soma += (e.valor || 0);
+      byMonth[ym].qtd  += 1;
     });
-    const vals = Object.values(byMonth);
-    const media = vals.length ? vals.reduce((a, v) => a + v, 0) / vals.length : 0;
+    const mediaMeses = Object.values(byMonth).map(m => m.soma / m.qtd);
+    const media = mediaMeses.length ? mediaMeses.reduce((a, v) => a + v, 0) / mediaMeses.length : 0;
     const mediaEl = q('ass-var-media'); if (mediaEl) mediaEl.textContent = moeda(media);
-    const numEl = q('ass-var-num-meses'); if (numEl) numEl.textContent = vals.length;
+    const numEl = q('ass-var-num-meses'); if (numEl) numEl.textContent = mediaMeses.length;
   }
 
   function salvarAssVarEntrada() {
@@ -787,11 +789,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const elH    = q('renda-media-hora');
     if (emp) {
       if (labelH) labelH.textContent = 'Fat. médio/mês';
-      const allSess   = lista.flatMap(r => r.sessoes || []);
-      const numSess   = allSess.length;
-      const totGanho  = allSess.reduce((a, s) => a + (s.ganho || 0), 0);
-      const mediaMes  = numSess > 0 ? (totGanho / numSess) * 30 : 0;
-      if (elH) elH.textContent = mediaMes > 0 ? moeda(mediaMes) : '—';
+      // Soma os fatMes de cada vendedor (cada um já calculado como média de médias mensais)
+      const hojeSum = new Date();
+      let somaFatMes = 0;
+      lista.filter(r => r.perfil === 'vendedor').forEach(r => {
+        let somaMedMeses = 0, numM = 0;
+        for (let i = 0; i < 3; i++) {
+          const d  = new Date(hojeSum.getFullYear(), hojeSum.getMonth() - i, 1);
+          const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+          const sessMes = (r.sessoes||[]).filter(s => (s.data||'').slice(0,7) === ym);
+          if (!sessMes.length) continue;
+          somaMedMeses += sessMes.reduce((a,s)=>a+(s.ganho||0),0) / sessMes.length;
+          numM++;
+        }
+        somaFatMes += numM > 0 ? somaMedMeses / numM : 0;
+      });
+      if (elH) elH.textContent = somaFatMes > 0 ? moeda(somaFatMes) : '—';
     } else {
       if (labelH) labelH.textContent = 'Média por hora';
       const horasTotal = lista.reduce((a, r) => {
@@ -823,9 +836,29 @@ document.addEventListener('DOMContentLoaded', () => {
       const numSess        = (s.sessoes||[]).length;
       const totalSessHoras = (s.sessoes||[]).reduce((a,x)=>a+(x.horas||0),0);
       const totalSessGanho = (s.sessoes||[]).reduce((a,x)=>a+(x.ganho||0),0);
-      const fatDia = numSess > 0 ? totalSessGanho / numSess : 0;
-      const fatMes = fatDia * 30;
-      const fatAno = fatDia * 365;
+      // Fat. médio/dia: média das sessões de cada dia nos últimos 30 dias, somadas e divididas por 30
+      const hojeCard = new Date();
+      let somaMedDiasCard = 0;
+      for (let i = 0; i < 30; i++) {
+        const d = new Date(hojeCard.getFullYear(), hojeCard.getMonth(), hojeCard.getDate() - i);
+        const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const sessDay = (s.sessoes||[]).filter(x => (x.data||'').slice(0,10) === iso);
+        if (sessDay.length) somaMedDiasCard += sessDay.reduce((a,x)=>a+(x.ganho||0),0) / sessDay.length;
+      }
+      const fatDia = somaMedDiasCard / 30;
+
+      // Fat. médio/mês: média de sessões de cada um dos 3 últimos meses (soma/qtd), depois /3
+      let somaMedMesesCard = 0, numMesesCard = 0;
+      for (let i = 0; i < 3; i++) {
+        const d  = new Date(hojeCard.getFullYear(), hojeCard.getMonth() - i, 1);
+        const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const sessMes = (s.sessoes||[]).filter(x => (x.data||'').slice(0,7) === ym);
+        if (!sessMes.length) continue;
+        somaMedMesesCard += sessMes.reduce((a,x)=>a+(x.ganho||0),0) / sessMes.length;
+        numMesesCard++;
+      }
+      const fatMes = numMesesCard > 0 ? somaMedMesesCard / numMesesCard : 0;
+      const fatAno = fatMes * 12;
       const cfg = ESCALA_CONFIG[s.escala] || ESCALA_CONFIG['5x2'];
       const escalaLabel = s.escala && !esVendedor && !emp
         ? `${cfg.label} · ${s.horasTurno||cfg.horasTurnoDefault}h/turno`
@@ -1045,8 +1078,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalHoras = sess.reduce((a,s)=>a+(s.horas||0),0);
     const mediaHora  = totalHoras > 0 ? totalGanho/totalHoras : 0;
     const numSess    = sess.length;
-    const fatDia     = numSess > 0 ? totalGanho / numSess : 0;
-    const fatMes     = fatDia * 30;
+
+    // Fat. médio/dia: para cada dia dos últimos 30, calcula média das sessões daquele dia,
+    // soma todas as médias diárias e divide por 30
+    const hoje30 = new Date();
+    let somaMedDias = 0;
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(hoje30.getFullYear(), hoje30.getMonth(), hoje30.getDate() - i);
+      const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const sessDay = sess.filter(s => (s.data||'').slice(0,10) === iso);
+      if (sessDay.length) {
+        const somaDia = sessDay.reduce((a,s)=>a+(s.ganho||0),0);
+        somaMedDias += somaDia / sessDay.length;
+      }
+    }
+    const fatDia = somaMedDias / 30;
+
+    // Fat. médio/mês: média das sessões de cada um dos 3 últimos meses (soma/qtd),
+    // depois soma essas 3 médias e divide por 3
+    const hojeM = new Date();
+    let somaMedMeses = 0, numMesesFat = 0;
+    for (let i = 0; i < 3; i++) {
+      const d  = new Date(hojeM.getFullYear(), hojeM.getMonth() - i, 1);
+      const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      const sessMes = sess.filter(s => (s.data||'').slice(0,7) === ym);
+      if (!sessMes.length) continue;
+      const somaMes = sessMes.reduce((a,s)=>a+(s.ganho||0),0);
+      somaMedMeses += somaMes / sessMes.length;
+      numMesesFat++;
+    }
+    const fatMes = numMesesFat > 0 ? somaMedMeses / numMesesFat : 0;
     q('vsess-total-ganho').textContent = moeda(totalGanho);
     // Toggle horas/media stats vs faturamento stats
     const elStatHoras = q('vsess-stat-horas');
@@ -1265,7 +1326,7 @@ document.addEventListener('DOMContentLoaded', () => {
   modalVsess?.addEventListener('click', e => { if(e.target===modalVsess) fecharModal(modalVsess); });
 
   /* ── Patch notes (exibe uma única vez) ── */
-  const PATCH_KEY      = 'money360_patch_renda_update';
+  const PATCH_KEY      = 'money360_patch_empresa_update';
   const modalPatch     = q('modal-patch-notes');
   if (modalPatch && !localStorage.getItem(PATCH_KEY)) {
     setTimeout(() => abrirModal(modalPatch), 600);
@@ -1388,15 +1449,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (a.tipo !== 'variavel') return a.valor || 0;
     const entradas = a.entradas || [];
     if (!entradas.length) return 0;
-    const byMonth = {};
-    entradas.forEach(e => {
-      const ym = (e.data || '').slice(0, 7);
-      if (!ym) return;
-      byMonth[ym] = (byMonth[ym] || 0) + (e.valor || 0);
-    });
-    const vals = Object.values(byMonth);
-    if (!vals.length) return 0;
-    return vals.reduce((a, v) => a + v, 0) / vals.length;
+    const hojeC = new Date();
+    let somaMedias = 0, numMeses = 0;
+    for (let i = 0; i < 3; i++) {
+      const d  = new Date(hojeC.getFullYear(), hojeC.getMonth() - i, 1);
+      const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      const entsDoMes = entradas.filter(e => (e.data||'').slice(0,7) === ym);
+      if (!entsDoMes.length) continue;
+      const somaMes = entsDoMes.reduce((s, e) => s + (e.valor||0), 0);
+      somaMedias += somaMes / entsDoMes.length;
+      numMeses++;
+    }
+    return numMeses > 0 ? somaMedias / numMeses : 0;
   }
 
   function renderProjecao() {
@@ -1411,18 +1475,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let rendaMensal;
     if (emp) {
-      const vendedoras = getRendas().filter(r => r.perfil === 'vendedor');
-      const corte = new Date(); corte.setDate(corte.getDate() - 90);
-      const corteStr = corte.toISOString().slice(0, 10);
-      const sess90 = vendedoras.flatMap(r => (r.sessoes || []).filter(s => !s.data || s.data >= corteStr));
-      const totalGanho = sess90.reduce((a, s) => a + (s.ganho || 0), 0);
-      rendaMensal = totalGanho / 3;
+      // Calcula fatMes de cada vendedor individualmente e soma (mesma lógica dos cards)
+      rendaMensal = getRendas().filter(r => r.perfil === 'vendedor').reduce((total, r) => {
+        let somaMedias = 0, numMeses = 0;
+        for (let i = 0; i < 3; i++) {
+          const d  = new Date(hojeP.getFullYear(), hojeP.getMonth() - i, 1);
+          const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+          const sessMes = (r.sessoes||[]).filter(s => (s.data||'').slice(0,7) === ym);
+          if (!sessMes.length) continue;
+          somaMedias += sessMes.reduce((a,s)=>a+(s.ganho||0),0) / sessMes.length;
+          numMeses++;
+        }
+        return total + (numMeses > 0 ? somaMedias / numMeses : 0);
+      }, 0);
     } else {
       rendaMensal = getRendas().reduce((a, r) => a + (r.valor || 0), 0);
     }
 
     const despesaMensal = assinaturas
       .filter(a => assinaturaAtivaEm(a, hojeP.getFullYear(), hojeP.getMonth()))
+      .filter(a => emp || a.tipo !== 'variavel')
       .reduce((a, s) => a + calcValorMensalAssinatura(s), 0);
     const sobraMensal   = rendaMensal - despesaMensal;
 
@@ -1440,6 +1512,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const rendaMes   = rendaMensal;
       const despesaMes = assinaturas
         .filter(a => assinaturaAtivaEm(a, d.getFullYear(), d.getMonth()))
+        .filter(a => emp || a.tipo !== 'variavel')
         .reduce((a, s) => a + calcValorMensalAssinatura(s), 0);
       saldoAcumulado += (rendaMes - despesaMes);
       meses.push({
@@ -1666,9 +1739,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderGraficoHistorico() {
-    const cv   = q('grafico-historico');
-    const leg  = q('historico-legenda');
-    const vaz  = q('historico-vazio');
+    const emp    = window._isModoEmpresa?.() || false;
+    const painel = q('painel-historico');
+    if (painel) painel.style.display = emp ? '' : 'none';
+    if (!emp) return;
+
+    const cv  = q('grafico-historico');
+    const leg = q('historico-legenda');
+    const vaz = q('historico-vazio');
+    const lst = q('historico-lista');
     if (!cv) return;
 
     const meses = _histGetMeses();
@@ -1676,130 +1755,204 @@ document.addEventListener('DOMContentLoaded', () => {
       const d = _histDadosMes(ano, mes);
       return { label: NOMES_MESES_PROJ[mes] + '/' + String(ano).slice(2), rec: d.rec, des: d.des, saldo: d.rec - d.des };
     });
-
     let dadosComp = null;
-    if (_histMode === 'ano' && _histComp) {
-      dadosComp = meses.map(({ mes }) => {
-        const d = _histDadosMes(_histComp, mes);
-        return { rec: d.rec, des: d.des };
-      });
+    if (_histComp) {
+      dadosComp = meses.map(({ mes }) => { const d = _histDadosMes(_histComp, mes); return { rec: d.rec, des: d.des }; });
     }
 
-    const temDados = dados.some(d => d.rec > 0 || d.des > 0);
+    const temDados = dados.some(d => d.rec > 0 || d.des > 0) || (dadosComp && dadosComp.some(d => d.rec > 0 || d.des > 0));
     if (!temDados) {
       cv.style.display = 'none';
       if (vaz) vaz.style.display = 'block';
       if (leg) leg.innerHTML = '';
+      if (lst) lst.innerHTML = '';
       return;
     }
     cv.style.display = 'block';
     if (vaz) vaz.style.display = 'none';
 
-    const dpr = window.devicePixelRatio || 1;
+    // Canvas DPR setup
+    const dpr  = window.devicePixelRatio || 1;
     const rect = cv.getBoundingClientRect();
-    const W = rect.width  || 600;
-    const H = rect.height || 200;
-    cv.width  = W * dpr;
-    cv.height = H * dpr;
-    const ctx = cv.getContext('2d');
+    const W    = Math.max(rect.width  || 600, 200);
+    const H    = Math.max(rect.height || 200, 120);
+    cv.width   = W * dpr;
+    cv.height  = H * dpr;
+    const ctx  = cv.getContext('2d');
     ctx.scale(dpr, dpr);
 
-    const cs       = getComputedStyle(document.documentElement);
+    const cs        = getComputedStyle(document.documentElement);
     const clrGreen  = cs.getPropertyValue('--color-success').trim() || '#30D988';
     const clrRed    = cs.getPropertyValue('--color-danger').trim()  || '#FF5C7A';
     const clrViolet = '#9B6DFF';
     const clrGrid   = cs.getPropertyValue('--border-subtle').trim() || '#2a2d3d';
     const clrText   = cs.getPropertyValue('--text-tertiary').trim() || '#9094a8';
+    const clrText2  = cs.getPropertyValue('--text-secondary').trim()|| '#c5c8dd';
 
-    const padL = 56, padR = 10, padT = 14, padB = 26;
+    const padL = 56, padR = 10, padT = 20, padB = 26;
     const w = W - padL - padR, h = H - padT - padB;
 
-    const allVals = dados.flatMap(d => [d.rec, d.des, d.saldo, 0]);
-    if (dadosComp) dadosComp.forEach(d => allVals.push(d.rec, d.des));
-    const maxV = Math.max(...allVals, 1), minV = Math.min(...allVals, 0);
+    // Bars always go UP from zero; saldo line can go below zero
+    const allBars  = dados.flatMap(d => [d.rec, d.des]);
+    if (dadosComp) dadosComp.forEach(d => allBars.push(d.rec, d.des));
+    const allSaldo = dados.map(d => d.saldo);
+    const maxV = Math.max(...allBars, ...allSaldo, 1);
+    const minV = Math.min(...allSaldo, 0);
     const span = (maxV - minV) || 1;
     const zeroY = padT + h - ((0 - minV) / span) * h;
 
-    const NICE = [1,2,5,10,20,25,50,100,200,250,500,1000,2000,2500,5000,10000,20000,25000,50000,100000];
-    const yStep = NICE.find(s => s >= span / 5) || NICE[NICE.length - 1];
+    // Bar layout
+    const hasComp = !!dadosComp;
+    const slotW   = w / dados.length;
+    const barW    = Math.min(Math.max(slotW * (hasComp ? 0.18 : 0.33), 4), hasComp ? 20 : 32);
+    const barGap  = 2;
+    const groupW  = hasComp ? (barW + barGap) * 4 - barGap : (barW + barGap) * 2 - barGap;
+
     function fmtY(v) {
       const a = Math.abs(v);
       return a >= 1000 ? 'R$' + (v/1000).toFixed(1) + 'k' : 'R$' + v.toFixed(0);
     }
-
-    ctx.font = `500 9px 'Plus Jakarta Sans',sans-serif`;
-    ctx.textAlign = 'right';
-    for (let v = Math.ceil(minV / yStep) * yStep; v <= maxV + yStep * 0.1; v += yStep) {
-      const yPos = padT + h - ((v - minV) / span) * h;
-      if (yPos < padT - 4 || yPos > padT + h + 4) continue;
-      ctx.strokeStyle = clrGrid; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
-      ctx.beginPath(); ctx.moveTo(padL, yPos); ctx.lineTo(padL + w, yPos); ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = clrText; ctx.fillText(fmtY(v), padL - 4, yPos + 3.5);
+    function fmtShort(v) {
+      if (v === 0) return '';
+      return Math.abs(v) >= 1000 ? (v/1000).toFixed(1) + 'k' : String(Math.round(v));
     }
 
-    // zero line
-    ctx.strokeStyle = clrGrid; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(padL, zeroY); ctx.lineTo(padL + w, zeroY); ctx.stroke();
+    function drawChart(hoverIdx = -1) {
+      ctx.clearRect(0, 0, W, H);
 
-    const slotW = w / dados.length;
-    const compBands = dadosComp ? 2 : 1;
-    const pairW = slotW * 0.8 / compBands;
-    const barW  = pairW * 0.45;
-
-    dados.forEach((d, i) => {
-      const slotX = padL + slotW * i;
-      const pairX = slotX + (slotW - pairW * compBands) / 2;
-
-      // comparison bars (lighter)
-      if (dadosComp) {
-        const c = dadosComp[i];
-        const pX = pairX;
-        const rH = Math.max(c.rec / span * h, 1);
-        ctx.globalAlpha = 0.35;
-        ctx.fillStyle = clrGreen;
-        ctx.fillRect(pX, zeroY - rH, barW, rH);
-        const dH = Math.max(c.des / span * h, 1);
-        ctx.fillStyle = clrRed;
-        ctx.fillRect(pX + barW + 1, zeroY, barW, dH);
-        ctx.globalAlpha = 1;
+      // Y-axis ticks + grid
+      const NICE = [1,2,5,10,20,25,50,100,200,250,500,1000,2000,2500,5000,10000,20000,25000,50000,100000];
+      const yStep = NICE.find(s => s >= span / 5) || NICE[NICE.length - 1];
+      ctx.font = `500 9px 'Plus Jakarta Sans',sans-serif`; ctx.textAlign = 'right';
+      for (let v = Math.ceil(minV / yStep) * yStep; v <= maxV + yStep * 0.1; v += yStep) {
+        const yPos = padT + h - ((v - minV) / span) * h;
+        if (yPos < padT - 4 || yPos > padT + h + 4) continue;
+        ctx.strokeStyle = clrGrid; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+        ctx.beginPath(); ctx.moveTo(padL, yPos); ctx.lineTo(padL + w, yPos); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = clrText; ctx.fillText(fmtY(v), padL - 4, yPos + 3.5);
       }
+      ctx.strokeStyle = clrGrid; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(padL, zeroY); ctx.lineTo(padL + w, zeroY); ctx.stroke();
 
-      const baseX = pairX + (dadosComp ? pairW : 0);
-      const rH = Math.max(d.rec / span * h, 1);
-      ctx.fillStyle = clrGreen;
-      ctx.fillRect(baseX, zeroY - rH, barW, rH);
-      const dH = Math.max(d.des / span * h, 1);
-      ctx.fillStyle = clrRed;
-      ctx.fillRect(baseX + barW + 1, zeroY, barW, dH);
+      // Bars
+      dados.forEach((d, i) => {
+        const slotX = padL + slotW * i;
+        const baseX = slotX + (slotW - groupW) / 2;
+        const isHov = hoverIdx === i;
 
-      ctx.fillStyle = clrText; ctx.font = `600 9px 'Plus Jakarta Sans',sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.fillText(d.label, slotX + slotW / 2, padT + h + 18);
-    });
+        if (isHov) {
+          ctx.fillStyle = 'rgba(255,255,255,0.05)';
+          ctx.fillRect(slotX, padT, slotW, h);
+        }
 
-    // saldo line
-    ctx.strokeStyle = clrViolet; ctx.lineWidth = 2; ctx.setLineDash([]);
-    ctx.beginPath();
-    dados.forEach((d, i) => {
-      const baseX = padL + slotW * i + (dadosComp ? pairW : 0) + slotW * 0.4 / compBands;
-      const y = padT + h - ((d.saldo - minV) / span) * h;
-      i === 0 ? ctx.moveTo(baseX, y) : ctx.lineTo(baseX, y);
-    });
-    ctx.stroke();
-    dados.forEach((d, i) => {
-      const baseX = padL + slotW * i + (dadosComp ? pairW : 0) + slotW * 0.4 / compBands;
-      const y = padT + h - ((d.saldo - minV) / span) * h;
-      ctx.beginPath(); ctx.arc(baseX, y, 3, 0, 2 * Math.PI);
-      ctx.fillStyle = clrViolet; ctx.fill();
-    });
+        let bx = baseX;
+        // comparison bars (lighter)
+        if (hasComp && dadosComp[i]) {
+          const c = dadosComp[i];
+          ctx.globalAlpha = 0.28;
+          const crH = Math.max(c.rec / span * h, 1);
+          ctx.fillStyle = clrGreen; ctx.fillRect(bx, zeroY - crH, barW, crH); bx += barW + barGap;
+          const cdH = Math.max(c.des / span * h, 1);
+          ctx.fillStyle = clrRed;   ctx.fillRect(bx, zeroY - cdH, barW, cdH); bx += barW + barGap;
+          ctx.globalAlpha = 1;
+        }
 
+        // rec bar (green, goes UP)
+        const rH = Math.max(d.rec / span * h, 1);
+        ctx.globalAlpha = isHov ? 1 : 0.85;
+        ctx.fillStyle = clrGreen;
+        ctx.fillRect(bx, zeroY - rH, barW, rH);
+        const recCx = bx + barW / 2;
+        bx += barW + barGap;
+
+        // des bar (red, goes UP)
+        const dH = Math.max(d.des / span * h, 1);
+        ctx.fillStyle = clrRed;
+        ctx.fillRect(bx, zeroY - dH, barW, dH);
+        const desCx = bx + barW / 2;
+        ctx.globalAlpha = 1;
+
+        // hover values above bars
+        if (isHov) {
+          ctx.font = `700 9px 'Plus Jakarta Sans',sans-serif`; ctx.textAlign = 'center';
+          if (d.rec > 0) {
+            ctx.fillStyle = clrGreen;
+            ctx.fillText(fmtShort(d.rec), recCx, Math.max(zeroY - rH - 3, padT + 9));
+          }
+          if (d.des > 0) {
+            ctx.fillStyle = clrRed;
+            ctx.fillText(fmtShort(d.des), desCx, Math.max(zeroY - dH - 3, padT + 9));
+          }
+        }
+
+        // month label
+        ctx.fillStyle = isHov ? clrText2 : clrText;
+        ctx.font = `${isHov ? '700' : '600'} ${isHov ? 10 : 9}px 'Plus Jakarta Sans',sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(d.label, slotX + slotW / 2, padT + h + 18);
+      });
+
+      // Saldo line (violet, can dip below zero)
+      ctx.strokeStyle = clrViolet; ctx.lineWidth = 2; ctx.setLineDash([]);
+      ctx.beginPath();
+      dados.forEach((d, i) => {
+        const cx = padL + slotW * i + slotW / 2;
+        const cy = padT + h - ((d.saldo - minV) / span) * h;
+        i === 0 ? ctx.moveTo(cx, cy) : ctx.lineTo(cx, cy);
+      });
+      ctx.stroke();
+      dados.forEach((d, i) => {
+        const cx = padL + slotW * i + slotW / 2;
+        const cy = padT + h - ((d.saldo - minV) / span) * h;
+        ctx.beginPath(); ctx.arc(cx, cy, 3, 0, 2 * Math.PI);
+        ctx.fillStyle = clrViolet; ctx.fill();
+      });
+    }
+
+    drawChart();
+
+    // Hover / touch handlers
+    function canvasPos(e) {
+      const r = cv.getBoundingClientRect();
+      return (e.clientX - r.left) * W / r.width;
+    }
+    function getIdx(px) {
+      if (px < padL || px > padL + w) return -1;
+      return Math.min(dados.length - 1, Math.floor((px - padL) / slotW));
+    }
+
+    if (cv._hoverFn) cv.removeEventListener('mousemove',  cv._hoverFn);
+    if (cv._leaveFn) cv.removeEventListener('mouseleave', cv._leaveFn);
+    if (cv._touchFn) cv.removeEventListener('touchstart', cv._touchFn);
+
+    cv._hoverFn = e => { const idx = getIdx(canvasPos(e)); drawChart(idx >= 0 ? idx : -1); };
+    cv._leaveFn = () => drawChart();
+    cv._touchFn = e => { e.preventDefault(); const idx = getIdx(canvasPos(e.touches[0])); if (idx >= 0) drawChart(idx); };
+    cv.addEventListener('mousemove',  cv._hoverFn);
+    cv.addEventListener('mouseleave', cv._leaveFn);
+    cv.addEventListener('touchstart', cv._touchFn, { passive: false });
+
+    // Legend
     if (leg) {
       leg.innerHTML = `
         <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${clrGreen}"></span>Receitas</span>
         <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${clrRed}"></span>Despesas</span>
         <span style="display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:10px;height:3px;border-radius:2px;background:${clrViolet}"></span>Saldo</span>
-        ${dadosComp ? `<span style="display:flex;align-items:center;gap:4px;opacity:.5"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${clrGreen}"></span>Comparação (${_histComp})</span>` : ''}`;
+        ${dadosComp ? `<span style="display:flex;align-items:center;gap:4px;opacity:.5"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${clrGreen}"></span>Mesmo período em ${_histComp}</span>` : ''}`;
+    }
+
+    // Table below (like projection)
+    if (lst) {
+      lst.innerHTML = dados.map(d => `
+        <div class="proj-row">
+          <span class="proj-row-mes">${d.label}</span>
+          <div class="proj-row-valores">
+            <span class="valor-receita">+${moeda(d.rec)}</span>
+            <span class="valor-despesa">−${moeda(d.des)}</span>
+            <span class="proj-row-saldo ${d.saldo >= 0 ? 'valor-receita' : 'valor-despesa'}">${d.saldo >= 0 ? '+' : '−'}${moeda(Math.abs(d.saldo))}</span>
+          </div>
+        </div>`).join('');
     }
   }
 

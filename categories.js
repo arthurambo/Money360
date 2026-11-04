@@ -170,7 +170,7 @@
       });
       if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
     });
-    const showCliente = isEmpresa && clienteCats.length > 0;
+    const showCliente = isEmpresa;
     ['campo-cliente', 'edit-campo-cliente', 'vsess-campo-cliente'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = showCliente ? '' : 'none';

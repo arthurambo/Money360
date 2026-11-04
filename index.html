@@ -482,8 +482,8 @@
                 </div>
                 <div id="historico-ano-wrap" style="display:none;align-items:center;gap:8px">
                   <select id="historico-ano-sel" class="campo-input campo-input--sm campo-select" style="width:84px"></select>
-                  <select id="historico-compare-sel" class="campo-input campo-input--sm campo-select" style="width:140px"><option value="">Sem comparação</option></select>
                 </div>
+                <select id="historico-compare-sel" class="campo-input campo-input--sm campo-select" style="width:160px"><option value="">Sem comparação</option></select>
               </div>
             </div>
             <div style="position:relative;width:100%">
@@ -491,6 +491,7 @@
             </div>
             <div id="historico-legenda" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;justify-content:center;font-size:.8rem;color:var(--text-secondary)"></div>
             <p id="historico-vazio" class="grafico-vazio" style="display:none">Sem transações no período.</p>
+            <div id="historico-lista"></div>
           </div>
           <div class="painel painel--full"><div class="painel-header"><h3 class="painel-titulo">Balanço por Categoria</h3></div><div id="rel-categorias" class="rel-lista-categorias"></div><p id="rel-vazio" class="grafico-vazio" style="display:none">Sem transações.</p></div>
           <div class="painel"><div class="painel-header"><h3 class="painel-titulo">Despesas por Categoria</h3></div><div class="grafico-wrapper"><canvas id="grafico-pizza2" width="200" height="200"></canvas><div id="grafico-legenda2" class="grafico-legenda"></div></div><p id="grafico-vazio2" class="grafico-vazio" style="display:none">Sem despesas.</p></div>
@@ -664,36 +665,43 @@
     <div class="modal-box modal-box--patch">
       <div class="patch-header">
         <div class="patch-badge">Novidades</div>
-        <h2 class="patch-titulo">Renda Update</h2>
-        <p class="patch-subtitulo">08 de setembro de 2026</p>
+        <h2 class="patch-titulo">Empresa Update</h2>
+        <p class="patch-subtitulo">04 de novembro de 2026</p>
       </div>
       <div class="patch-lista">
         <div class="patch-item">
-          <span class="patch-item-icon">⚙️</span>
+          <span class="patch-item-icon">📊</span>
           <div>
-            <strong>Perfil de renda</strong>
-            <p>Cada fonte agora tem um perfil — <em>Trabalhador</em> ou <em>Vendedor</em>.</p>
+            <strong>Histórico Financeiro</strong>
+            <p>Novo gráfico (modo empresa) com ganhos e gastos lado a lado, hover com valores e tabela de saldo por mês. Compare qualquer período com anos anteriores.</p>
           </div>
         </div>
         <div class="patch-item">
-          <span class="patch-item-icon">👷</span>
+          <span class="patch-item-icon">📈</span>
           <div>
-            <strong>Trabalhador — ganho por hora</strong>
-            <p>Defina sua escala (5×2, 6×1, 12×36…) e horas por turno. O app calcula automaticamente quanto você ganha por hora.</p>
+            <strong>Projeção mais precisa</strong>
+            <p>Renda mensal e gastos variáveis agora usam média de médias — cada mês tem seu próprio peso, sem distorção por volume de registros.</p>
           </div>
         </div>
         <div class="patch-item">
-          <span class="patch-item-icon">🛒</span>
+          <span class="patch-item-icon">🔀</span>
           <div>
-            <strong>Vendedor — dias de venda</strong>
-            <p>Registre cada dia vendido com valor ganho e horas trabalhadas. O ganho/hora é calculado pela média de todas as vendas, e cada registro cria uma transação automaticamente.</p>
+            <strong>Assinaturas variáveis</strong>
+            <p>Crie assinaturas do tipo <em>Variável</em> no modo empresa e adicione registros mensais. A média é calculada automaticamente e entra na projeção.</p>
           </div>
         </div>
         <div class="patch-item">
-          <span class="patch-item-icon">🔍</span>
+          <span class="patch-item-icon">👤</span>
           <div>
-            <strong>Filtros de transações</strong>
-            <p>Categoria filtra por tipo selecionado. Filtro de data substituído por períodos rápidos (28, 90, 365 dias) e seletor de mês/ano.</p>
+            <strong>Filtro por cliente</strong>
+            <p>Filtre suas transações por cliente diretamente na aba Transações quando o modo empresa estiver ativo.</p>
+          </div>
+        </div>
+        <div class="patch-item">
+          <span class="patch-item-icon">🐛</span>
+          <div>
+            <strong>Correções</strong>
+            <p>Fat. médio/dia e /mês recalculados corretamente. Gasto variável oculto fora do modo empresa. Campo cliente de volta no formulário de transação.</p>
           </div>
         </div>
       </div>
