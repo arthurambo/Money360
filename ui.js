@@ -868,17 +868,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const fatDia = somaMedDiasCard / 30;
 
-      // Fat. médio/mês: média de sessões de cada um dos 3 últimos meses (soma/qtd), depois /3
-      let somaMedMesesCard = 0, numMesesCard = 0;
+      // Fat. médio/mês: soma dos meses com dado / qtd meses com dado
+      let totalMesCard = 0, numMesesCard = 0;
       for (let i = 0; i < 3; i++) {
         const d  = new Date(hojeCard.getFullYear(), hojeCard.getMonth() - i, 1);
         const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
         const sessMes = (s.sessoes||[]).filter(x => (x.data||'').slice(0,7) === ym);
         if (!sessMes.length) continue;
-        somaMedMesesCard += sessMes.reduce((a,x)=>a+(x.ganho||0),0) / sessMes.length;
+        totalMesCard += sessMes.reduce((a,x)=>a+(x.ganho||0),0);
         numMesesCard++;
       }
-      const fatMes = numMesesCard > 0 ? somaMedMesesCard / numMesesCard : 0;
+      const fatMes = numMesesCard > 0 ? totalMesCard / numMesesCard : 0;
       const fatAno = fatMes * 12;
       const cfg = ESCALA_CONFIG[s.escala] || ESCALA_CONFIG['5x2'];
       const escalaLabel = s.escala && !esVendedor && !emp
@@ -1119,17 +1119,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fat. médio/mês: média das sessões de cada um dos 3 últimos meses (soma/qtd),
     // depois soma essas 3 médias e divide por 3
     const hojeM = new Date();
-    let somaMedMeses = 0, numMesesFat = 0;
+    let totalMesFat = 0, numMesesFat = 0;
     for (let i = 0; i < 3; i++) {
       const d  = new Date(hojeM.getFullYear(), hojeM.getMonth() - i, 1);
       const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
       const sessMes = sess.filter(s => (s.data||'').slice(0,7) === ym);
       if (!sessMes.length) continue;
-      const somaMes = sessMes.reduce((a,s)=>a+(s.ganho||0),0);
-      somaMedMeses += somaMes / sessMes.length;
+      totalMesFat += sessMes.reduce((a,s)=>a+(s.ganho||0),0);
       numMesesFat++;
     }
-    const fatMes = numMesesFat > 0 ? somaMedMeses / numMesesFat : 0;
+    const fatMes = numMesesFat > 0 ? totalMesFat / numMesesFat : 0;
     q('vsess-total-ganho').textContent = moeda(totalGanho);
     // Toggle horas/media stats vs faturamento stats
     const elStatHoras = q('vsess-stat-horas');
@@ -1479,17 +1478,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const entradas = a.entradas || [];
     if (!entradas.length) return 0;
     const hojeC = new Date();
-    let somaMedias = 0, numMeses = 0;
+    let totalMesAss = 0, numMesesAss = 0;
     for (let i = 0; i < 3; i++) {
       const d  = new Date(hojeC.getFullYear(), hojeC.getMonth() - i, 1);
       const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
       const entsDoMes = entradas.filter(e => (e.data||'').slice(0,7) === ym);
       if (!entsDoMes.length) continue;
-      const somaMes = entsDoMes.reduce((s, e) => s + (e.valor||0), 0);
-      somaMedias += somaMes / entsDoMes.length;
-      numMeses++;
+      totalMesAss += entsDoMes.reduce((s, e) => s + (e.valor||0), 0);
+      numMesesAss++;
     }
-    return numMeses > 0 ? somaMedias / numMeses : 0;
+    return numMesesAss > 0 ? totalMesAss / numMesesAss : 0;
   }
 
   function renderProjecao() {
@@ -1504,18 +1502,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let rendaMensal;
     if (emp) {
-      // Calcula fatMes de cada vendedor individualmente e soma (mesma lógica dos cards)
+      // Calcula fatMes de cada vendedor individualmente e soma
       rendaMensal = getRendas().filter(r => r.perfil === 'vendedor').reduce((total, r) => {
-        let somaMedias = 0, numMeses = 0;
+        let totalMes = 0, numMeses = 0;
         for (let i = 0; i < 3; i++) {
           const d  = new Date(hojeP.getFullYear(), hojeP.getMonth() - i, 1);
           const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
           const sessMes = (r.sessoes||[]).filter(s => (s.data||'').slice(0,7) === ym);
           if (!sessMes.length) continue;
-          somaMedias += sessMes.reduce((a,s)=>a+(s.ganho||0),0) / sessMes.length;
+          totalMes += sessMes.reduce((a,s)=>a+(s.ganho||0),0);
           numMeses++;
         }
-        return total + (numMeses > 0 ? somaMedias / numMeses : 0);
+        return total + (numMeses > 0 ? totalMes / numMeses : 0);
       }, 0);
     } else {
       rendaMensal = getRendas().reduce((a, r) => a + (r.valor || 0), 0);
