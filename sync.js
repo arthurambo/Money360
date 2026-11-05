@@ -218,8 +218,15 @@
       const localRenda = parseArr(localStorage.getItem(RENDA_KEY));
       const localCat   = parseArr(localStorage.getItem(CAT_KEY));
       if (!txArr.length && localTx.length)       txArr    = corrigirIds(localTx);
-      if (!assArr.length && localAss.length)     assArr   = corrigirIds(localAss);
       if (!rendaArr.length && localRenda.length) rendaArr = corrigirIds(localRenda);
+      if (!assArr.length && localAss.length) {
+        assArr = corrigirIds(localAss);
+      } else if (assArr.length && localAss.length) {
+        // Mescla assinaturas locais que não estão no banco (ex.: variáveis sem coluna tipo/entradas)
+        const idsNoSupabase = new Set(assArr.map(a => a.id));
+        const extras = localAss.filter(a => !idsNoSupabase.has(a.id));
+        if (extras.length) assArr = [...assArr, ...corrigirIds(extras)];
+      }
       if (!catArr.length && localCat.length) {
         catArr = localCat;
       } else if (catArr.length && localCat.length) {
