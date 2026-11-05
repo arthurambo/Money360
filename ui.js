@@ -810,20 +810,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const elH    = q('renda-media-hora');
     if (emp) {
       if (labelH) labelH.textContent = 'Fat. médio/mês';
-      // Soma os fatMes de cada vendedor (cada um já calculado como média de médias mensais)
+      // Soma os fatMes de cada vendedor (mesma fórmula dos cards)
       const hojeSum = new Date();
       let somaFatMes = 0;
       lista.filter(r => r.perfil === 'vendedor').forEach(r => {
-        let somaMedMeses = 0, numM = 0;
+        let totalMes = 0, numM = 0;
         for (let i = 0; i < 3; i++) {
           const d  = new Date(hojeSum.getFullYear(), hojeSum.getMonth() - i, 1);
           const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
           const sessMes = (r.sessoes||[]).filter(s => (s.data||'').slice(0,7) === ym);
           if (!sessMes.length) continue;
-          somaMedMeses += sessMes.reduce((a,s)=>a+(s.ganho||0),0) / sessMes.length;
+          totalMes += sessMes.reduce((a,s)=>a+(s.ganho||0),0);
           numM++;
         }
-        somaFatMes += numM > 0 ? somaMedMeses / numM : 0;
+        somaFatMes += numM > 0 ? totalMes / numM : 0;
       });
       if (elH) elH.textContent = somaFatMes > 0 ? moeda(somaFatMes) : '—';
     } else {
