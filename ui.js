@@ -810,21 +810,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const elH    = q('renda-media-hora');
     if (emp) {
       if (labelH) labelH.textContent = 'Fat. médio/mês';
-      // Soma os fatMes de cada vendedor (mesma fórmula dos cards)
+      // Fat. médio/mês geral: pool de todas as sessões de todos os vendedores
       const hojeSum = new Date();
-      let somaFatMes = 0;
-      lista.filter(r => r.perfil === 'vendedor').forEach(r => {
-        let totalMes = 0, numM = 0;
-        for (let i = 0; i < 3; i++) {
-          const d  = new Date(hojeSum.getFullYear(), hojeSum.getMonth() - i, 1);
-          const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-          const sessMes = (r.sessoes||[]).filter(s => (s.data||'').slice(0,7) === ym);
-          if (!sessMes.length) continue;
-          totalMes += sessMes.reduce((a,s)=>a+(s.ganho||0),0);
-          numM++;
-        }
-        somaFatMes += numM > 0 ? totalMes / numM : 0;
-      });
+      const todasSessoes = lista.filter(r => r.perfil === 'vendedor').flatMap(r => r.sessoes || []);
+      let totalMesSum = 0, numMSum = 0;
+      for (let i = 0; i < 3; i++) {
+        const d  = new Date(hojeSum.getFullYear(), hojeSum.getMonth() - i, 1);
+        const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const sessMes = todasSessoes.filter(s => (s.data||'').slice(0,7) === ym);
+        if (!sessMes.length) continue;
+        totalMesSum += sessMes.reduce((a,s)=>a+(s.ganho||0),0);
+        numMSum++;
+      }
+      const somaFatMes = numMSum > 0 ? totalMesSum / numMSum : 0;
       if (elH) elH.textContent = somaFatMes > 0 ? moeda(somaFatMes) : '—';
     } else {
       if (labelH) labelH.textContent = 'Média por hora';
