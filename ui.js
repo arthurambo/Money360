@@ -1500,19 +1500,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let rendaMensal;
     if (emp) {
-      // Calcula fatMes de cada vendedor individualmente e soma
-      rendaMensal = getRendas().filter(r => r.perfil === 'vendedor').reduce((total, r) => {
-        let totalMes = 0, numMeses = 0;
-        for (let i = 0; i < 3; i++) {
-          const d  = new Date(hojeP.getFullYear(), hojeP.getMonth() - i, 1);
-          const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-          const sessMes = (r.sessoes||[]).filter(s => (s.data||'').slice(0,7) === ym);
-          if (!sessMes.length) continue;
-          totalMes += sessMes.reduce((a,s)=>a+(s.ganho||0),0);
-          numMeses++;
-        }
-        return total + (numMeses > 0 ? totalMes / numMeses : 0);
-      }, 0);
+      // Pool de todas as sessões de todos os vendedores (mesma fórmula do resumo do topo)
+      const todasSessoesP = getRendas().filter(r => r.perfil === 'vendedor').flatMap(r => r.sessoes || []);
+      let totalMesP = 0, numMesesP = 0;
+      for (let i = 0; i < 3; i++) {
+        const d  = new Date(hojeP.getFullYear(), hojeP.getMonth() - i, 1);
+        const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const sessMes = todasSessoesP.filter(s => (s.data||'').slice(0,7) === ym);
+        if (!sessMes.length) continue;
+        totalMesP += sessMes.reduce((a,s)=>a+(s.ganho||0),0);
+        numMesesP++;
+      }
+      rendaMensal = numMesesP > 0 ? totalMesP / numMesesP : 0;
     } else {
       rendaMensal = getRendas().reduce((a, r) => a + (r.valor || 0), 0);
     }
